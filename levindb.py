@@ -53,23 +53,23 @@ def create_tables():
         IonChannelSubClass TEXT NOT NULL
         );''')
     curs.execute('''CREATE TABLE PDB(
+        Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
         UniProtAccNum TEXT NOT NULL,
         PDBID TEXT NOT NULL,
-        HumanOnly TEXT NOT NULL,
-        PRIMARY KEY (UniProtAccNum, PDBID)
+        HumanOnly TEXT NOT NULL
         );''')
     curs.execute('''CREATE TABLE ExternalDB(
         Name TEXT PRIMARY KEY NOT NULL,
         URL TEXT NOT NULL
         );''')
     curs.execute('''CREATE TABLE DBTissue(
+        Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
         ExternalDBName TEXT NOT NULL,
         TissueName TEXT NOT NULL,
-        DBEquivalentTissueName TEXT NOT NULL,
-        PRIMARY KEY (ExternalDBName, DBEquivalentTissueName)
+        DBEquivalentTissueName TEXT NOT NULL
         );''')
     curs.execute('''CREATE TABLE Expression(
-        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+        Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
         TissueName TEXT NOT NULL,
         ProteinUniProtAccNum TEXT NOT NULL,
         ExprLevel REAL NOT NULL,
@@ -79,18 +79,18 @@ def create_tables():
         SourceDBName TEXT NOT NULL
         );''')
     curs.execute('''CREATE TABLE DBGene(
+        Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
         ExternalDBName TEXT NOT NULL,
         GenbankAccNum TEXT NOT NULL,
-        ProbeID TEXT NOT NULL,
-        PRIMARY KEY (ExternalDBName, GenbankAccNum)
+        ProbeID TEXT NOT NULL
         );''')
     curs.execute('''CREATE TABLE GenbankUniprot(
+        Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
         GenbankAccNum TEXT NOT NULL,
-        UniProtAccNum TEXT NOT NULL,
-        PRIMARY KEY (GenbankAccNum, UniprotAccNum)
+        UniProtAccNum TEXT NOT NULL
         );''')
     curs.execute('''CREATE TABLE Compound(
-        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+        Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
         SMILES TEXT NOT NULL,
         InChI TEXT NOT NULL,
         Name TEXT NOT NULL,
