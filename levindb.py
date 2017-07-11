@@ -100,7 +100,7 @@ def create_tables():
         SourceDBName NOT NULL
         );''')
     curs.execute('''CREATE TABLE Interaction(
-        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+        Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
         TargetUniProtAccNum TEXT NOT NULL,
         CompoundId INTEGER NOT NULL,
         ActionType TEXT NOT NULL,
