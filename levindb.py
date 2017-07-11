@@ -1,11 +1,14 @@
 import sqlite3
 import csv
+import unicodecsv
 import go_obo_parser
 import os
+import codecs
 
 DB_FILENAME = 'levin.db'
 OBO_FILENAME = 'data/bto/BrendaTissueOBO.obo'
-PROTEIN_FILENAME = 'data/go/ion-channels.csv'
+TISSUE_FILENAME = 'data/bto/tissues.txt'
+PROTEIN_FILENAME = 'data/go/ion-channels-1.csv'
 EXTDB_BIOGPS = 'biogps'
 GPL96_FILENAME = 'data/geo/GPL96-57554.txt'
 GENBANKUNIPROT_FILENAME = 'data/uniprot/GenBankUniProt.txt' 
@@ -16,10 +19,23 @@ BIOGPS_TRANSLATION_TABLE = 'data/biogps/biogps_translation_table.csv'
 DRUGBANK_FILENAME = 'data/target-compound/output-organized-Drugbank.dat'
 CHEMBL_COMPOUND_FILENAME = \
         'data/target-compound/output-query_ChEMBL-uniprot-compound.dat'
+TARGET_COMPOUND_FILENAME = 'data/target-compound/target-compound.csv'
+CHANNEL_CLASSES_FILENAME = 'data/channel-classes/channel-classes.csv'
 
 def create_tables():
     conn = sqlite3.connect(DB_FILENAME)
     curs = conn.cursor()
+    curs.execute('''CREATE TABLE ChannelSuperClass(
+        Name TEXT PRIMARY KEY NOT NULL
+        );''')
+    curs.execute('''CREATE TABLE ChannelClass(
+        Name TEXT PRIMARY KEY NOT NULL,
+        SuperClass TEXT NOT NULL
+        );''')
+    curs.execute('''CREATE TABLE ChannelSubClass(
+        Name TEXT PRIMARY KEY NOT NULL,
+        Class TEXT NOT NULL
+        );''')
     curs.execute('''CREATE TABLE Tissue(
         Name TEXT PRIMARY KEY NOT NULL,
         BTOId TEXT UNIQUE NOT NULL,
@@ -27,9 +43,20 @@ def create_tables():
         );''')
     curs.execute('''CREATE TABLE Protein(
         UniProtAccNum TEXT PRIMARY KEY NOT NULL,
-        GeneSymbol TEXT UNIQUE NOT NULL,
+        GeneSymbol TEXT NOT NULL,
         Name TEXT NOT NULL,
-        ProcessFunction TEXT NOT NULL
+        ProcessFunction TEXT NOT NULL,
+        Ions TEXT NOT NULL,
+        Gating TEXT NOT NULL,
+        InBETSE TEXT NOT NULL,
+        IonChannelClassDesc TEXT NOT NULL,
+        IonChannelSubClass TEXT NOT NULL
+        );''')
+    curs.execute('''CREATE TABLE PDB(
+        UniProtAccNum TEXT NOT NULL,
+        PDBID TEXT NOT NULL,
+        HumanOnly TEXT NOT NULL,
+        PRIMARY KEY (UniProtAccNum, PDBID)
         );''')
     curs.execute('''CREATE TABLE ExternalDB(
         Name TEXT PRIMARY KEY NOT NULL,
@@ -86,6 +113,38 @@ def create_tables():
     conn.commit()
     conn.close()
 
+def add_channel_superclass(name):
+    conn = sqlite3.connect(DB_FILENAME)
+    curs = conn.cursor()
+    curs.execute('''INSERT INTO ChannelSuperClass (Name)
+        VALUES (?)''', (name,))
+    conn.commit()
+    conn.close()
+
+def add_channel_class(name, superclass):
+    conn = sqlite3.connect(DB_FILENAME)
+    curs = conn.cursor()
+    curs.execute('''INSERT INTO ChannelClass (Name, SuperClass)
+        VALUES (?, ?)''', (name, superclass))
+    conn.commit()
+    conn.close()
+
+def add_channel_subclass(name, channel_class):
+    conn = sqlite3.connect(DB_FILENAME)
+    curs = conn.cursor()
+    curs.execute('''INSERT INTO ChannelSubClass (Name, Class)
+        VALUES (?, ?)''', (name, channel_class))
+    conn.commit()
+    conn.close()
+
+def update_protein_subclass(gene_symbol, subclass):
+    conn = sqlite3.connect(DB_FILENAME)
+    curs = conn.cursor()
+    curs.execute('''UPDATE Protein SET IonChannelSubClass = ?
+        WHERE GeneSymbol = ?''', (subclass, gene_symbol))
+    conn.commit()
+    conn.close()
+
 def add_externaldb(name, url):
     conn = sqlite3.connect(DB_FILENAME)
     curs = conn.cursor()
@@ -102,13 +161,17 @@ def add_tissue(tissue_name, bto_id='', parent_tissue_name=''):
     conn.commit()
     conn.close()
 
-def add_protein(uniprot_accnum, gene_symbol='', name='', process_function=''):
+def add_protein(uniprot_accnum, gene_symbol='', name='', process_function='',
+        ions='', gating='', in_betse='', ion_channel_class_desc='',
+        ion_channel_subclass=''):
     conn = sqlite3.connect(DB_FILENAME)
     curs = conn.cursor()
     curs.execute('''INSERT INTO Protein (UniProtAccNum, GeneSymbol,
-        Name, ProcessFunction)
-        VALUES (?, ?, ?, ?)''',
-        (uniprot_accnum, gene_symbol, name, process_function))
+        Name, ProcessFunction, Ions, Gating, InBETSE, IonChannelClassDesc,
+        IonChannelSubClass)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+        (uniprot_accnum, gene_symbol, name, process_function, ions, gating,
+        in_betse, ion_channel_class_desc, ion_channel_subclass))
     conn.commit()
     conn.close()
 
@@ -163,7 +226,7 @@ def add_interaction(target_uniprot_accnum, compound_id, action_type='',
         (target_uniprot_accnum, compound_id, action_type, action_desc, 
         strength, strength_units, assay_type, sourcedb_name))
     conn.commit()
-    conn.close()    
+    conn.close()
 
 def add_dbtissue(externaldb_name, tissue_name, db_equivalent_tissue_name):
     conn = sqlite3.connect(DB_FILENAME)
@@ -195,6 +258,45 @@ def exists_protein(uniprot_accnum):
     curs.execute('''SELECT EXISTS(SELECT 1 FROM Protein
             WHERE UniProtAccNum=? LIMIT 1)''',
             (uniprot_accnum,))
+    row = curs.fetchone()
+    if row[0] == 1:
+        return True
+    else:
+        return False
+
+def exists_channel_superclass(name):
+    conn = sqlite3.connect(DB_FILENAME)
+    curs = conn.cursor()
+    expr_list = []
+    curs.execute('''SELECT EXISTS(SELECT 1 FROM ChannelSuperClass
+            WHERE Name=? LIMIT 1)''',
+            (name,))
+    row = curs.fetchone()
+    if row[0] == 1:
+        return True
+    else:
+        return False
+
+def exists_channel_class(name):
+    conn = sqlite3.connect(DB_FILENAME)
+    curs = conn.cursor()
+    expr_list = []
+    curs.execute('''SELECT EXISTS(SELECT 1 FROM ChannelClass
+            WHERE Name=? LIMIT 1)''',
+            (name,))
+    row = curs.fetchone()
+    if row[0] == 1:
+        return True
+    else:
+        return False
+
+def exists_channel_subclass(name):
+    conn = sqlite3.connect(DB_FILENAME)
+    curs = conn.cursor()
+    expr_list = []
+    curs.execute('''SELECT EXISTS(SELECT 1 FROM ChannelSubClass
+            WHERE Name=? LIMIT 1)''',
+            (name,))
     row = curs.fetchone()
     if row[0] == 1:
         return True
@@ -241,7 +343,7 @@ def dump_tissues():
 
 def dump_database():
     conn = sqlite3.connect(DB_FILENAME)
-    with open('dump.sql', 'w') as f:
+    with codecs.open('dump.sql', 'w', 'utf-8') as f:
         for line in conn.iterdump():
             f.write('%s\n' % line)
 
@@ -302,6 +404,10 @@ def setup_externaldb():
     add_externaldb('biogps', 'http://biogps.org')
     add_externaldb('chembl', 'https://www.ebi.ac.uk/chembl/')
     add_externaldb('brenda', 'http://www.brenda-enzymes.org')
+    add_externaldb('drugbank', 'https://www.drugbank.ca')
+    add_externaldb('zinc15', 'http://zinc15.docking.org')
+    add_externaldb('hmdb', 'http://www.hmdb.ca')
+    add_externaldb('channelpedia', 'http://channelpedia.epfl.ch')
 
 def cleanup_externaldb():
     conn = sqlite3.connect(DB_FILENAME)
@@ -311,11 +417,17 @@ def cleanup_externaldb():
     conn.close()
 
 def setup_ontology():
+    tissue_dict = {}
+    tissue_file = open(TISSUE_FILENAME)
+    for line in tissue_file:
+        tissue_dict[line.strip()] = 1
+    tissue_file.close()
     parser = go_obo_parser.parseGOOBO(OBO_FILENAME)
     for record in parser:
-        bto_id = record['id']
         name = record['name']
-        add_tissue(name, bto_id=bto_id)
+        if name in tissue_dict:
+            bto_id = record['id']
+            add_tissue(name, bto_id=bto_id)
 
 def cleanup_ontology():
     conn = sqlite3.connect(DB_FILENAME)
@@ -343,31 +455,56 @@ def cleanup_dbtissue():
 
 def setup_ion_channels():
     prot_file = open(PROTEIN_FILENAME, 'rU')
-    prot_reader = csv.reader(prot_file)
+    prot_reader = unicodecsv.reader(prot_file, encoding='utf-8')
     prot_reader.next()
     for row in prot_reader:
-        name = row[6]
-        process_function = row[7]
+        name = row[2]
+        process_function = row[3]
         #if process_function.startswith('NOT AN ION CHANNEL'):
         #    continue
-        uniprot_accnum = row[4]
+        uniprot_accnum = row[0]
         if uniprot_accnum == '':
             continue
         if not uniprot_accnum[0] in ['O', 'P', 'Q']:
             continue
-        gene_symbol = row[5]
+        gene_symbol = row[1]
         if gene_symbol == '-':
             gene_symbol = ''
         if gene_symbol == '':
             continue
-        check_uniprot_accnum = lookup_uniprot_accnum_by_gene_symbol(gene_symbol)
-        if check_uniprot_accnum != '':
-            continue
-        check_gene_symbol = lookup_gene_symbol_by_uniprot_accnum(uniprot_accnum)
-        if check_gene_symbol != '':
-            continue
-        add_protein(uniprot_accnum, gene_symbol, name, process_function)
+        ions = row[4]
+        gating = row[5]
+        ion_channel_subclass = row[6]
+        in_betse = row[7]
+        #check_uniprot_accnum = lookup_uniprot_accnum_by_gene_symbol(gene_symbol)
+        #if check_uniprot_accnum != '':
+        #    print 'Dup:', gene_symbol, check_uniprot_accnum
+        #check_gene_symbol = lookup_gene_symbol_by_uniprot_accnum(uniprot_accnum)
+        #if check_gene_symbol != '':
+        #    print 'Dup:', uniprot_accnum, check_gene_symbol
+        add_protein(uniprot_accnum, gene_symbol, name, process_function, ions,
+                gating, in_betse, ion_channel_subclass)
+        #print 'Added %s' % uniprot_accnum
     prot_file.close()
+
+def setup_channel_classes():
+    classfile = open(CHANNEL_CLASSES_FILENAME)
+    classreader = csv.reader(classfile)
+    classreader.next()
+    for row in classreader:
+        channel_superclass = row[0]
+        channel_class = row[1]
+        channel_subclass = row[2]
+        subfamily = row[3]
+        gene = row[4]
+        if not exists_channel_superclass(channel_superclass):
+            add_channel_superclass(channel_superclass)
+        if not exists_channel_class(channel_class):
+            add_channel_class(channel_class, channel_superclass)
+        if not exists_channel_subclass(channel_subclass):
+            add_channel_subclass(channel_subclass, channel_class)
+        update_protein_subclass(gene, channel_subclass)
+    classfile.close()
 
 def setup_all_proteins():
     mapping_dict = {}
@@ -389,7 +526,7 @@ def setup_all_proteins():
         if exists_protein(uniprot_accum):
             continue
         add_protein(uniprot_accum, gene_symbol, '', '')
-        print 'Added %s %s' % (uniprot_accum, gene_symbol)
+        #print 'Added %s %s' % (uniprot_accum, gene_symbol)
     prot_file.close()
 
 def cleanup_proteins():
@@ -434,11 +571,11 @@ def setup_chembl():
         uniprot = line[0:14].strip()
         #target_name = line[14:96].strip()
         #target_id = line[96:114].strip()
-        #compound_key = line[114:128].strip()
-        chembl_compound_id = line[128:146].strip()
-        compound_name_in_doc = line[146:348].strip()
-        first_approval = line[348:356].strip()
-        withdrawn_flag = line[356:].strip()
+        chembl_compound_id = line[114:132].strip()
+        compound_name_in_doc = line[132:334].strip()
+        first_approval = line[334:342].strip()
+        withdrawn_flag = line[342:346].strip()
+        inchi = line[346:].strip()
         # This is a temporary way of checking if the compound exists
         if exists_protein(uniprot) and not exists_compound(chembl_compound_id):
             if withdrawn_flag == 1:
@@ -461,10 +598,39 @@ def setup_hmdb():
 def setup_drugbank():
     pass
 
+def setup_target_compound():
+    tcf = open(TARGET_COMPOUND_FILENAME)
+    tcr = csv.reader(tcf)
+    tcr.next()
+    for row in tcr:
+        uniprot = row[1]
+        effect_type = row[7]
+        compound_name = row[9]
+        if compound_name == '':
+            continue
+        compound_id = row[10]
+        param = row[11]
+        value = row[12]
+        if not exists_compound(compound_id):
+            add_compound('', '', compound_id, compound_name, '', '',
+                    'chembl')
+            #print 'Added %s' % compound_id
+        add_interaction(uniprot, compound_id, action_type=effect_type,
+                strength=value, strength_units=param, sourcedb_name='chembl')
+        #print 'Added interaction %s %s' % (uniprot, compound_id)
+    tcf.close()
+
 def cleanup_compounds():
     conn = sqlite3.connect(DB_FILENAME)
     curs = conn.cursor()
     curs.execute('''DELETE FROM Compound''')
+    conn.commit()
+    conn.close()
+
+def cleanup_interactions():
+    conn = sqlite3.connect(DB_FILENAME)
+    curs = conn.cursor()
+    curs.execute('''DELETE FROM Interaction''')
     conn.commit()
     conn.close()
 

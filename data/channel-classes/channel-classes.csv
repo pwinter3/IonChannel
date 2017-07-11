@@ -1,0 +1,170 @@
+Superclass,Class,Subclass,Subfamily,Gene
+K,Kv1,Kv1.1,Subfamily A (Shaker-related Subfamily),KCNA1
+K,Kv1,Kv1.2,Subfamily A (Shaker-related Subfamily),KCNA2
+K,Kv1,Kv1.3,Subfamily A (Shaker-related Subfamily),KCNA3
+K,Kv1,Kv1.4,Subfamily A (Shaker-related Subfamily),KCNA4
+K,Kv1,Kv1.5,Subfamily A (Shaker-related Subfamily),KCNA5
+K,Kv1,Kv1.6,Subfamily A (Shaker-related Subfamily),KCNA6
+K,Kv1,Kv1.7,Subfamily A (Shaker-related Subfamily),KCNA7
+K,Kv1,Kv1.8,Subfamily A (Shaker-related Subfamily),KCNA10
+K,Kv2,Kv2.1,Subfamily B (Shab-related Subfamily),KCNB1
+K,Kv2,Kv2.2,Subfamily B (Shab-related Subfamily),KCNB2
+K,Kv3,Kv3.1,Subfamily C (Shaw-related Subfamily),KCNC1
+K,Kv3,Kv3.2,Subfamily C (Shaw-related Subfamily),KCNC2
+K,Kv3,Kv3.3,Subfamily C (Shaw-related Subfamily),KCNC3
+K,Kv3,Kv3.4,Subfamily C (Shaw-related Subfamily),KCNC4
+K,Kv4,Kv4.1,Subfamily D (Shai-related Subfamily),KCND1
+K,Kv4,Kv4.2,Subfamily D (Shai-related Subfamily),KCND2
+K,Kv4,Kv4.3,Subfamily D (Shai-related Subfamily),KCND3
+K,Kv5,Kv5.1,Subfamily F,KCNF1
+K,Kv6,Kv6.1,Subfamily G,KCNG1
+K,Kv6,Kv6.2,Subfamily G,KCNG2
+K,Kv6,Kv6.3,Subfamily G,KCNG3
+K,Kv6,Kv6.4,Subfamily G,KCNG4
+K,Kv7,Kv7.1,KQT-like Subfamily,KCNQ1
+K,Kv7,Kv7.2,KQT-like Subfamily,KCNQ2
+K,Kv7,Kv7.3,KQT-like Subfamily,KCNQ3
+K,Kv7,Kv7.4,KQT-like Subfamily,KCNQ4
+K,Kv7,Kv7.5,KQT-like Subfamily,KCNQ5
+K,Kv8,Kv8.1,Subfamily V,KCNV1
+K,Kv8,Kv8.2,Subfamily V,KCNV2
+K,Kv9,Kv9.1,Subfamily S,KCNS1
+K,Kv9,Kv9.2,Subfamily S,KCNS2
+K,Kv9,Kv9.3,Subfamily S,KCNS3
+K,Kv10,Kv10.1,Subfamily H (eag),KCNH1
+K,Kv10,Kv10.2,Subfamily H (eag),KCNH5
+K,Kv11,Kv11.1,Subfamily H (erg),KCNH2
+K,Kv11,Kv11.2,Subfamily H (erg),KCNH6
+K,Kv11,Kv11.3,Subfamily H (erg),KCNH7
+K,Kv12,Kv12.1,Subfamily H (erg),KCNH8
+K,Kv12,Kv12.2,Subfamily H (erg),KCNH3
+K,Kv12,Kv12.3,Subfamily H (erg),KCNH4
+K,Kir,Kir1.1,Subfamily J (inward-rectifying),KCNJ1
+K,Kir,Kir2.1,Subfamily J (inward-rectifying),KCNJ2
+K,Kir,Kir2.2,Subfamily J (inward-rectifying),KCNJ12
+K,Kir,Kir2.3,Subfamily J (inward-rectifying),KCNJ4
+K,Kir,Kir2.4,Subfamily J (inward-rectifying),KCNJ14
+K,Kir,Kir3.1,Subfamily J (inward-rectifying),KCNJ3
+K,Kir,Kir3.2,Subfamily J (inward-rectifying),KCNJ6
+K,Kir,Kir3.3,Subfamily J (inward-rectifying),KCNJ9
+K,Kir,Kir3.4,Subfamily J (inward-rectifying),KCNJ5
+K,Kir,Kir4.1,Subfamily J (inward-rectifying),KCNJ10
+K,Kir,Kir4.2,Subfamily J (inward-rectifying),KCNJ15
+K,Kir,Kir5.1,Subfamily J (inward-rectifying),KCNJ16
+K,Kir,Kir6.1,Subfamily J (inward-rectifying),KCNJ8
+K,Kir,Kir6.2,Subfamily J (inward-rectifying),KCNJ11
+K,Kir,Kir7.1,Subfamily J (inward-rectifying),KCNJ13
+K,Kca,SK1,Subfamily N (intermediate/small conductance Ca-activated channel),KCNN1
+K,Kca,SK2,Subfamily N (intermediate/small conductance Ca-activated channel),KCNN2
+K,Kca,SK3,Subfamily N (intermediate/small conductance Ca-activated channel),KCNN3
+K,Kca,SK4,Subfamily N (intermediate/small conductance Ca-activated channel),KCNN4
+K,Kca,Slo1,Subfamily M (large conductance Ca-activated channel),KCNMA1
+K,Kca,Slo2,Subfamily T,KCNT1
+K,Kca,Slo2b,Subfamily T,KCNT2
+K,Kca,Slo3,Subfamily M (large conductance pH-sensitive channel),KCNMA3
+K,Kca,BkB1,Subfamily M (large conductance Ca-activated channel),KCNMB1
+K,Kca,BKB2,Subfamily M (large conductance Ca-activated channel),KCNMB2
+K,Kca,BKB3,Subfamily M (large conductance Ca-activated channel),KCNMB3
+K,Kca,BKB4,Subfamily M (large conductance Ca-activated channel),KCNMB4
+K,Kca,KChip1,,KCNIP1
+K,Kca,KChip2a,,KCNIP2
+K,KvBeta,KvBeta1,Shaker-Related Subfamily,KCNAB1
+K,KvBeta,KvBeta2,Shaker-Related Subfamily,KCNAB2
+K,KvBeta,KvBeta3,Shaker-Related Subfamily,KCNAB3
+K,KCNK,TASK-1,Subfamily K,KCNK3
+K,KCNK,TASK-2,Subfamily K,KCNK5
+K,KCNK,TASK-3,Subfamily K,KCNK9
+K,KCNK,TASK-4,Subfamily K,KCNK17
+K,KCNK,TASK-5,Subfamily K,KCNK15
+K,KCNK,TALK-1,Subfamily K,KCNK16
+K,KCNK,THIK-1,Subfamily K,KCNK13
+K,KCNK,THIK-2,Subfamily K,KCNK12
+K,KCNK,TREK-1,Subfamily K,KCNK2
+K,KCNK,TREK-2,Subfamily K,KCNK10
+K,KCNK,TWIK-1,Subfamily K,KCNK1
+K,KCNK,TWIK-2,Subfamily K,KCNK6
+Na,Nav1,Nav1.1,Type I,SCN1A
+Na,Nav1,Nav1.2,Type II,SCN2A
+Na,Nav1,Nav1.3,Type III,SCN3A
+Na,Nav1,Nav1.4,Type IV,SCN4A
+Na,Nav1,Nav1.5,Type V,SCN5A
+Na,Nav1,Nav1.6,Type VIII,SCN8A
+Na,Nav1,Nav1.7,Type IX,SCN9A
+Na,Nav1,Nav1.8,Type X,SCN10A
+Na,Nav1,Nav1.9,Type XI,SCN11A
+Na,Nav2,Nav2.1,Type VII,SCN7A
+Na,Nav2,Nav2.2,Type VII,SCN7A
+Na,Nav2,Nav2.3,Type VII,SCN7A
+Na,Nav2,Nav2.4,Type IV,SCN4B
+Na,Nav3,Nav3.1,,NAV3 
+Ca,Cav,Cav1.1,L type,CACNA1S
+Ca,Cav,Cav1.2,L type,CACNA1C
+Ca,Cav,Cav1.3,L type,CACNA1D
+Ca,Cav,Cav1.4,L type,CACNA1F
+Ca,Cav,Cav2.1,P/Q-type channel,CACNA1A
+Ca,Cav,Cav2.2,N-type,CACNA1B
+Ca,Cav,Cav2.3,R-type,CACNA1E
+Ca,Cav,Cav3.1,T-type,CACNA1G
+Ca,Cav,Cav3.2,T-type,CACNA1H
+Ca,Cav,Cav3.3,T-type,CACNA1I
+Ca,Cav,cancnb1,,CACNB1
+Ca,Cav,cancnb2,,CACNB2
+Ca,Cav,cancnb3,,CACNB3
+Ca,Cav,cancnb4,,CACNB4
+Ca,Cav,cacng1,,CACNG1
+Ca,Cav,cacng2,,CACNG2
+Ca,Cav,cacng3,,CACNG3
+Ca,Cav,cacng4,,CACNG4
+Ca,Cav,cacng5,,CACNG5
+Ca,Cav,cacng6,,CACNG6
+Ca,Cav,cacng7,,CACNG7
+Ca,Cav,cacng8,,CACNG8
+Ca,Cav,cacna2d1,,CACNA2D1
+Ca,Cav,cacna2d2,,CACNA2D2
+Ca,Cav,cacna2d3,,CACNA2D3
+Cl,Cl,ClvC1,,CLCN1
+Cl,Cl,ClvC2,,CLCN2
+Cl,Cl,ClvC3,,CLCN3
+Cl,Cl,ClvC4,,CLCN4
+Cl,Cl,ClvC5,,CLCN5
+Cl,Cl,ClvC6,,CLCN6
+Cl,Cl,ClvC7,,CLCN7
+Cl,Cl,ClCa1,,CLCA1
+Cl,Cl,ClCa2,,CLCA2
+Cl,Cl,ClCa4,,CLCA4
+Cl,Cl,ClCK1,,CLCNKA
+Cl,Cl,ClCK2,,CLCNKB
+Cl,Cl,ClIC1,,CLIC1
+Cl,Cl,ClIC2,,CLIC2
+Cl,Cl,ClIC3,,CLIC3
+Cl,Cl,ClIC4,,CLIC4
+Cl,Cl,ClIC5,,CLIC5
+Ih,HCN,HCN1,HCN channel family,HCN1
+Ih,HCN,HCN2,HCN channel family,HCN2
+Ih,HCN,HCN3,HCN channel family,HCN3
+Ih,HCN,HCN4,HCN channel family,HCN4
+TRP,TRPC,TRPC1,Subfamily C,TRPC1
+TRP,TRPC,TRPC2,Subfamily C,TRPC2
+TRP,TRPC,TRPC3,Subfamily C,TRPC3
+TRP,TRPC,TRPC4,Subfamily C,TRPC4
+TRP,TRPC,TRPC5,Subfamily C,TRPC5
+TRP,TRPC,TRPC6,Subfamily C,TRPC6
+TRP,TRPC,TRPC7,Subfamily C,TRPC7
+TRP,TRPM,TRPM1,Subfamily M,TRPM1
+TRP,TRPM,TRPM2,Subfamily M,TRPM2
+TRP,TRPM,TRPM3,Subfamily M,TRPM3
+TRP,TRPM,TRPM4,Subfamily M,TRPM4
+TRP,TRPM,TRPM5,Subfamily M,TRPM5
+TRP,TRPM,TRPM6,Subfamily M,TRPM6
+TRP,TRPM,TRPM7,Subfamily M,TRPM7
+TRP,TRPM,TRPM8,Subfamily M,TRPM8
+TRP,TRPV,TRPV1,Subfamily V,TRPV1
+TRP,TRPV,TRPV2,Subfamily V,TRPV2
+TRP,TRPV,TRPV3,Subfamily V,TRPV3
+TRP,TRPV,TRPV4,Subfamily V,TRPV4
+TRP,TRPV,TRPV5,Subfamily V,TRPV5
+TRP,TRPV,TRPV6,Subfamily V,TRPV6
+TRP,TRPA,TRPA1,Subfamily A,TRPA1
+TRP,TRPML,TRPML1,,MCOLN1
+TRP,TRPML,TRPML2,,MCOLN2
+TRP,TRPML,TRPML3,,MCOLN3
