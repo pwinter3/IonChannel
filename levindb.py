@@ -94,6 +94,7 @@ def create_tables():
         SMILES TEXT NOT NULL,
         InChI TEXT NOT NULL,
         Name TEXT NOT NULL,
+        ChemblId TEXT NOT NULL,
         Synonyms TEXT NOT NULL,
         ApprovalStatus TEXT NOT NULL,
         FirstApprovalYear TEXT NOT NULL,
@@ -202,15 +203,15 @@ def add_genbankuniprot(genbank_accnum, uniprot_accnum):
     conn.commit()
     conn.close()    
 
-def add_compound(smiles, inchi, name, synonyms='', approval_status='',
-        first_approval_year='', sourcedb_name=''):
+def add_compound(smiles, inchi, name, chembl_id='', synonyms='',
+        approval_status='', first_approval_year='', sourcedb_name=''):
     conn = sqlite3.connect(DB_FILENAME)
     curs = conn.cursor()
-    curs.execute('''INSERT INTO Compound (SMILES, InChI, Name, Synonyms,
-        ApprovalStatus, FirstApprovalYear, SourceDBName)
-        VALUES (?, ?, ?, ?, ?, ?, ?)''',
-        (smiles, inchi, name, synonyms, approval_status, first_approval_year, 
-        sourcedb_name))
+    curs.execute('''INSERT INTO Compound (SMILES, InChI, Name, ChemblId,
+        Synonyms, ApprovalStatus, FirstApprovalYear, SourceDBName)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+        (smiles, inchi, name, chembl_id, synonyms, approval_status,
+        first_approval_year, sourcedb_name))
     conn.commit()
     conn.close()    
 
@@ -595,11 +596,12 @@ def setup_chembl():
                 approval_status = 'WITHDRAWN'
             else:
                 approval_status = 'UNKNOWN'
-            add_compound('', '', chembl_compound_id, compound_name_in_doc,
+            add_compound('', '', compound_name_in_doc, chembl_compound_id, '',
                     approval_status, first_approval, 'chembl')
             #print 'Added compound %s' % chembl_compound_id
         if exists_protein(uniprot) and exists_compound(chembl_compound_id):
             compound_id = lookup_compound_by_name(chembl_compound_id)
+            print compound_id
             if not exists_interaction(uniprot, compound_id):
                 add_interaction(uniprot, compound_id, sourcedb_name='chembl')
                 #print 'Added interaction %s %s' % (uniprot, chembl_compound_id)
@@ -621,15 +623,18 @@ def setup_target_compound():
         compound_name = row[9]
         if compound_name == '':
             continue
-        compound_id = row[10]
+        chembl_compound_id = row[10]
         param = row[11]
         value = float(row[12])
-        if not exists_compound(compound_id):
-            add_compound('', '', compound_id, compound_name, '', '', 'chembl')
-            #print 'Added %s' % compound_id
-        add_interaction(uniprot, compound_id, action_type=effect_type,
-                strength=value, strength_units=param, sourcedb_name='chembl')
-        #print 'Added interaction %s %s' % (uniprot, compound_id)
+        if exists_protein(uniprot):
+            if not exists_compound(chembl_compound_id):
+                compound_id = lookup_compound_by_name(chembl_compound_id)
+                add_compound('', '', compound_name, chembl_compound_id, 
+                        '', '', '', 'chembl')
+                #print 'Added %s' % compound_id
+            add_interaction(uniprot, compound_id, action_type=effect_type,
+                    strength=value, strength_units=param, sourcedb_name='chembl')
+            #print 'Added interaction %s %s' % (uniprot, compound_id)
     tcf.close()
 
 def cleanup_compounds():
