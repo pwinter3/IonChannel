@@ -627,8 +627,8 @@ def setup_target_compound():
         param = row[11]
         value = float(row[12])
         if exists_protein(uniprot):
+            compound_id = lookup_compound_by_name(chembl_compound_id)
             if not exists_compound(chembl_compound_id):
-                compound_id = lookup_compound_by_name(chembl_compound_id)
                 add_compound('', '', compound_name, chembl_compound_id, 
                         '', '', '', 'chembl')
                 #print 'Added %s' % compound_id
