@@ -360,6 +360,19 @@ def lookup_uniprot_accnum_by_gene_symbol(gene_symbol):
     conn.close()
     return result
 
+def lookup_uniprot_accnum_by_gene_symbol_multiple(gene_symbol):
+    conn = sqlite3.connect(DB_FILENAME)
+    curs = conn.cursor()
+    curs.execute('''SELECT UniProtAccNum FROM Protein WHERE GeneSymbol=?''', 
+        (gene_symbol,))
+    resultset = curs.fetchall()
+    if resultset == None:
+        result = []
+    else:
+        result = resultset
+    conn.close()
+    return resultset
+
 def lookup_gene_symbol_by_uniprot_accnum(uniprot_accnum):
     conn = sqlite3.connect(DB_FILENAME)
     curs = conn.cursor()
@@ -610,10 +623,9 @@ def setup_target_compound():
             continue
         compound_id = row[10]
         param = row[11]
-        value = row[12]
+        value = float(row[12])
         if not exists_compound(compound_id):
-            add_compound('', '', compound_id, compound_name, '', '',
-                    'chembl')
+            add_compound('', '', compound_id, compound_name, '', '', 'chembl')
             #print 'Added %s' % compound_id
         add_interaction(uniprot, compound_id, action_type=effect_type,
                 strength=value, strength_units=param, sourcedb_name='chembl')
@@ -679,16 +691,18 @@ def process_biogps_microarray(annot_dict):
         if not probeset_id in annot_dict:
             continue
         symbol = annot_dict[probeset_id]
-        uniprot_accnum = lookup_uniprot_accnum_by_gene_symbol(symbol.strip())
-        if uniprot_accnum == '':
+        uniprot_accnum_list = lookup_uniprot_accnum_by_gene_symbol_multiple(symbol.strip())
+        if len(uniprot_accnum_list) == 0:
             continue
         for i in xrange(0, len(tissue_list)):
             expr_level = float(row[i + 1])
             tissue_name = lookup_dbtissue('biogps', tissue_list[i])
-            add_expression(tissue_name, uniprot_accnum, expr_level, 
-                    assay_type='microarray', dataset_name=BIOGPS_DATASET, 
-                    sourcedb_name='biogps')
-            #print 'Added %s %s' % (uniprot_accnum, tissue_name)
+            for uniprot_accnum in uniprot_accnum_list:
+                uniprot_accnum = uniprot_accnum[0]
+                add_expression(tissue_name, uniprot_accnum, expr_level, 
+                        assay_type='microarray', dataset_name=BIOGPS_DATASET, 
+                        sourcedb_name='biogps')
+                #print 'Added %s %s' % (uniprot_accnum, tissue_name)
     microarray_f.close()
 
 def process_biogps_data():
