@@ -304,13 +304,13 @@ def exists_channel_subclass(name):
     else:
         return False
 
-def exists_compound(compound_name):
+def exists_compound(chembl_id):
     conn = sqlite3.connect(DB_FILENAME)
     curs = conn.cursor()
     expr_list = []
     curs.execute('''SELECT EXISTS(SELECT 1 FROM Compound
-            WHERE Name=? LIMIT 1)''',
-            (compound_name,))
+            WHERE ChemblId=? LIMIT 1)''',
+            (chembl_id,))
     row = curs.fetchone()
     if row[0] == 1:
         return True
@@ -393,6 +393,19 @@ def lookup_dbtissue(externaldb_name, db_equivalent_tissue_name):
     curs.execute('''SELECT TissueName FROM DBTissue WHERE ExternalDBName=?
         AND DBEquivalentTissueName=?''', 
         (externaldb_name, db_equivalent_tissue_name))
+    resultset = curs.fetchone()
+    if resultset == None:
+        result = ''
+    else:
+        result = resultset[0]
+    conn.close()
+    return result
+
+def lookup_compound_by_chembl_id(chembl_id):
+    conn = sqlite3.connect(DB_FILENAME)
+    curs = conn.cursor()
+    curs.execute('''SELECT Id FROM Compound WHERE ChemblId=?''', 
+        (chembl_id,))
     resultset = curs.fetchone()
     if resultset == None:
         result = ''
@@ -623,18 +636,16 @@ def setup_target_compound():
         compound_name = row[9]
         if compound_name == '':
             continue
-        chembl_compound_id = row[10]
+        chembl_id = row[10]
         param = row[11]
         value = float(row[12])
         if exists_protein(uniprot):
-            compound_id = lookup_compound_by_name(chembl_compound_id)
-            if not exists_compound(chembl_compound_id):
-                add_compound('', '', compound_name, chembl_compound_id, 
+            if not exists_compound(chembl_id):
+                add_compound('', '', compound_name, chembl_id, 
                         '', '', '', 'chembl')
-                #print 'Added %s' % compound_id
+            compound_id = lookup_compound_by_chembl_id(chembl_id)
             add_interaction(uniprot, compound_id, action_type=effect_type,
                     strength=value, strength_units=param, sourcedb_name='chembl')
-            #print 'Added interaction %s %s' % (uniprot, compound_id)
     tcf.close()
 
 def cleanup_compounds():
