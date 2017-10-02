@@ -9,11 +9,9 @@ DB_FILENAME = 'levin.db'
 OBO_FILENAME = 'data/bto/BrendaTissueOBO.obo'
 TISSUE_FILENAME = 'data/bto/tissues.txt'
 PROTEIN_FILENAME = 'data/go/ion-channels-1.csv'
-EXTDB_BIOGPS = 'biogps'
 GPL96_FILENAME = 'data/geo/GPL96-57554.txt'
 GENBANKUNIPROT_FILENAME = 'data/uniprot/GenBankUniProt.txt' 
 BIOGPS_GCRMA = 'data/biogps/U133AGNF1B.gcrma.avg.csv'
-BIOGPS_DATASET = 'U133AGNF1B'
 BIOGPS_GNF1H_ANNOT = 'data/biogps/gnf1h.annot2007.tsv'
 BIOGPS_TRANSLATION_TABLE = 'data/biogps/biogps_translation_table.csv'
 DRUGBANK_FILENAME = 'data/target-compound/output-organized-Drugbank.dat'
@@ -21,6 +19,15 @@ CHEMBL_COMPOUND_FILENAME = \
         'data/target-compound/output-query_ChEMBL-uniprot-compound.dat'
 TARGET_COMPOUND_FILENAME = 'data/target-compound/target-compound.csv'
 CHANNEL_CLASSES_FILENAME = 'data/channel-classes/channel-classes.csv'
+HUMAN_IDMAPPING = 'data/uniprot/HUMAN_9606_idmapping_Gene_Name.dat'
+OUTPUT_ORGANIZED_DRUGBANK = 'data/Target-Compound Tables-2016-11/output-organized-Drugbank.dat'
+OUTPUT_ORGANIZED_HMDB_METABOLITES = 'data/Target-Compound Tables-2016-11/output-organized-HMDB-metabolites.dat'
+OUTPUT_ORGANIZED_HMDB_TARGETS = 'data/Target-Compound Tables-2016-11/output-organized-HMDB-targets.dat'
+OUTPUT_QUERY_CHEMBL_UNIPROT_COMPOUND = 'data/Target-Compound Tables-2016-11/output-query_ChEMBL-uniprot-compound.dat'
+OUTPUT_QUERY_CHEMBL_UNIPROT_DRUG = 'data/Target-Compound Tables-2016-11/output-query_ChEMBL-uniprot-drug.dat'
+
+EXTDB_BIOGPS = 'biogps'
+BIOGPS_DATASET = 'U133AGNF1B'
 
 def create_tables():
     conn = sqlite3.connect(DB_FILENAME)
@@ -515,7 +522,7 @@ def setup_ion_channels():
     prot_file.close()
 
 def setup_channel_classes():
-    classfile = open(CHANNEL_CLASSES_FILENAME)
+    classfile = open(CHANNEL_CLASSES_FILENAME, 'rU')
     classreader = csv.reader(classfile)
     classreader.next()
     for row in classreader:
@@ -535,13 +542,13 @@ def setup_channel_classes():
 
 def setup_all_proteins():
     mapping_dict = {}
-    uniprot_symbol_file = open('data/uniprot/HUMAN_9606_idmapping_Gene_Name.dat')
+    uniprot_symbol_file = open(HUMAN_IDMAPPING)
     for line in uniprot_symbol_file:
         uniprot_accum = line.strip().split()[0]
         gene_symbol = line.strip().split()[2]
         mapping_dict[gene_symbol] = uniprot_accum
     uniprot_symbol_file.close()
-    prot_file = open('data/biogps/gnf1h.annot2007.tsv', 'rU')
+    prot_file = open(BIOGPS_GNF1H_ANNOT, 'rU')
     prot_reader = csv.reader(prot_file, delimiter='\t')
     prot_reader.next()
     for row in prot_reader:
@@ -829,4 +836,23 @@ def get_expression_prob_for_all_tissues():
             out_file.write(',%.6f' % overall_aa_prob[aa])
         out_file.write('\n')
     out_file.close()
+
+def write_db_stats():
+
+    conn = sqlite3.connect(DB_FILENAME)
+    curs = conn.cursor()
+    curs.execute("SELECT * FROM sqlite_master WHERE type='table'")
+    table_name_list = []
+    for table_info in curs:
+        table_name = table_info[1]
+        table_name_list.append(table_name)
+    conn.close()
+    
+    for table_name in table_name_list:
+        conn = sqlite3.connect(DB_FILENAME)
+        curs = conn.cursor()
+        curs.execute('SELECT COUNT(*) FROM %s' % (table_name,))
+        row_count = curs.fetchone()[0]
+        print table_name, row_count
+        conn.close()
 
