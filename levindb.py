@@ -20,13 +20,19 @@ CHEMBL_COMPOUND_FILENAME = \
 TARGET_COMPOUND_FILENAME = 'data/target-compound/target-compound.csv'
 CHANNEL_CLASSES_FILENAME = 'data/channel-classes/channel-classes.csv'
 HUMAN_IDMAPPING = 'data/uniprot/HUMAN_9606_idmapping_Gene_Name.dat'
-OUTPUT_ORGANIZED_DRUGBANK = 'data/Target-Compound Tables-2016-11/output-organized-Drugbank.dat'
-OUTPUT_ORGANIZED_HMDB_METABOLITES = 'data/Target-Compound Tables-2016-11/output-organized-HMDB-metabolites.dat'
-OUTPUT_ORGANIZED_HMDB_TARGETS = 'data/Target-Compound Tables-2016-11/output-organized-HMDB-targets.dat'
-OUTPUT_QUERY_CHEMBL_UNIPROT_COMPOUND = 'data/Target-Compound Tables-2016-11/output-query_ChEMBL-uniprot-compound.dat'
-OUTPUT_QUERY_CHEMBL_UNIPROT_DRUG = 'data/Target-Compound Tables-2016-11/output-query_ChEMBL-uniprot-drug.dat'
+
+OUTPUT_ORGANIZED_DRUG_INFO_DRUGBANK = 'data/Target-CompoundTables-2017-01/output-organized_drug-info-Drugbank.dat'
+OUTPUT_ORGANIZED_DRUG_INFO_HMDB = 'data/Target-CompoundTables-2017-01/output-organized_drug-info-HMDB.dat'
+OUTPUT_ORGANIZED_TARGET_INFO_DRUGBANK = 'data/Target-CompoundTables-2017-01/output-organized_target-info-Drugbank.dat'
+OUTPUT_ORGANIZED_TARGET_INFO_HMDB = 'data/Target-CompoundTables-2017-01/output-organized_target-info-HMDB.dat'
+OUTPUT_ORGANIZED_TTD = 'data/Target-CompoundTables-2017-01/output-organized-TTD.dat'
+OUTPUT_QUERY_CHEMBL_UNIPROT_COMPOUND = 'data/Target-CompoundTables-2017-01/output-query_ChEMBL-uniprot-compound.dat'
+OUTPUT_QUERY_CHEMBL_UNIPROT_DRUG = 'data/Target-CompoundTables-2017-01/output-query_ChEMBL-uniprot-drug.dat'
+OUTPUT_COMPOUND_ASSAYS = 'data/Chembl-query_2017-08-16/output_compound-assays_v1.1.dat'
+OUTPUT_DRUG_ASSAYS = 'data/Chembl-query_2017-08-16/output_drug-assays_v1.1.dat'
 
 EXTDB_BIOGPS = 'biogps'
+EXTDB_CHEMBL = 'chembl'
 BIOGPS_DATASET = 'U133AGNF1B'
 
 def create_tables():
@@ -57,7 +63,8 @@ def create_tables():
         Gating TEXT NOT NULL,
         InBETSE TEXT NOT NULL,
         IonChannelClassDesc TEXT NOT NULL,
-        IonChannelSubClass TEXT NOT NULL
+        IonChannelSubClass TEXT NOT NULL,
+        ChemblId TEXT NOT NULL
         );''')
     curs.execute('''CREATE TABLE PDB(
         Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -116,6 +123,7 @@ def create_tables():
         Strength REAL NOT NULL,
         StrengthUnits TEXT NOT NULL,
         AssayType TEXT NOT NULL,
+        ChemblId TEXT NOT NULL,
         SourceDBName TEXT NOT NULL
         );''')
     conn.commit()
@@ -171,15 +179,15 @@ def add_tissue(tissue_name, bto_id='', parent_tissue_name=''):
 
 def add_protein(uniprot_accnum, gene_symbol='', name='', process_function='',
         ions='', gating='', in_betse='', ion_channel_class_desc='',
-        ion_channel_subclass=''):
+        ion_channel_subclass='', chembl_id=''):
     conn = sqlite3.connect(DB_FILENAME)
     curs = conn.cursor()
     curs.execute('''INSERT INTO Protein (UniProtAccNum, GeneSymbol,
         Name, ProcessFunction, Ions, Gating, InBETSE, IonChannelClassDesc,
-        IonChannelSubClass)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+        IonChannelSubClass, ChemblId)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
         (uniprot_accnum, gene_symbol, name, process_function, ions, gating,
-        in_betse, ion_channel_class_desc, ion_channel_subclass))
+        in_betse, ion_channel_class_desc, ion_channel_subclass, chembl_id))
     conn.commit()
     conn.close()
 
@@ -224,15 +232,15 @@ def add_compound(smiles, inchi, name, chembl_id='', synonyms='',
 
 def add_interaction(target_uniprot_accnum, compound_id, action_type='',
         action_desc='', strength=0, strength_units='', assay_type='',
-        sourcedb_name = ''):
+        chembl_id = '', sourcedb_name = ''):
     conn = sqlite3.connect(DB_FILENAME)
     curs = conn.cursor()
     curs.execute('''INSERT INTO Interaction (TargetUniProtAccNum, CompoundId,
         ActionType, ActionDesc, Strength, StrengthUnits, AssayType, 
-        SourceDBName)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+        ChemblId, SourceDBName)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
         (target_uniprot_accnum, compound_id, action_type, action_desc, 
-        strength, strength_units, assay_type, sourcedb_name))
+        strength, strength_units, assay_type, chembl_id, sourcedb_name))
     conn.commit()
     conn.close()
 
@@ -355,6 +363,93 @@ def dump_database():
         for line in conn.iterdump():
             f.write('%s\n' % line)
 
+def lookup_protein_by_accnum(accnum):
+    conn = sqlite3.connect(DB_FILENAME)
+    curs = conn.cursor()
+    curs.execute('''SELECT UniProtAccNum, GeneSymbol, Name, ProcessFunction,
+            Ions, Gating, InBETSE, IonChannelClassDesc, IonChannelSubClass,
+            ChemblId FROM Protein WHERE UniProtAccNum=?''', 
+        (accnum,))
+    resultset = curs.fetchone()
+    if resultset == None:
+        result = ''
+    else:
+        result = resultset
+    conn.close()
+    return result
+
+def update_protein_name(uniprot_accnum, name):
+    conn = sqlite3.connect(DB_FILENAME)
+    curs = conn.cursor()
+    curs.execute('''UPDATE Protein SET Name = ? WHERE UniProtAccNum = ?''',
+        (name, uniprot_accnum))
+    conn.commit()
+    conn.close()
+
+def update_protein_chembl_id(uniprot_accnum, chembl_id):
+    conn = sqlite3.connect(DB_FILENAME)
+    curs = conn.cursor()
+    curs.execute('''UPDATE Protein SET ChemblId = ? WHERE UniProtAccNum = ?''',
+        (chembl_id, uniprot_accnum))
+    conn.commit()
+    conn.close()
+
+def update_protein_gene_symbol(uniprot_accnum, gene_symbol):
+    conn = sqlite3.connect(DB_FILENAME)
+    curs = conn.cursor()
+    curs.execute('''UPDATE Protein SET GeneSymbol = ? WHERE UniProtAccNum = ?''',
+        (gene_symbol, uniprot_accnum))
+    conn.commit()
+    conn.close()
+
+def update_protein_process_function(uniprot_accnum, process_function):
+    conn = sqlite3.connect(DB_FILENAME)
+    curs = conn.cursor()
+    curs.execute('''UPDATE Protein SET ProcessFunction = ? WHERE UniProtAccNum = ?''',
+        (process_function, uniprot_accnum))
+    conn.commit()
+    conn.close()
+
+def update_protein_ions(uniprot_accnum, ions):
+    conn = sqlite3.connect(DB_FILENAME)
+    curs = conn.cursor()
+    curs.execute('''UPDATE Protein SET Ions = ? WHERE UniProtAccNum = ?''',
+        (ions, uniprot_accnum))
+    conn.commit()
+    conn.close()
+
+def update_protein_gating(uniprot_accnum, gating):
+    conn = sqlite3.connect(DB_FILENAME)
+    curs = conn.cursor()
+    curs.execute('''UPDATE Protein SET Gating = ? WHERE UniProtAccNum = ?''',
+        (gating, uniprot_accnum))
+    conn.commit()
+    conn.close()
+
+def update_protein_in_betse(uniprot_accnum, in_betse):
+    conn = sqlite3.connect(DB_FILENAME)
+    curs = conn.cursor()
+    curs.execute('''UPDATE Protein SET InBETSE = ? WHERE UniProtAccNum = ?''',
+        (in_betse, uniprot_accnum))
+    conn.commit()
+    conn.close()
+
+def update_protein_ion_channel_class_desc(uniprot_accnum, ion_channel_class_desc):
+    conn = sqlite3.connect(DB_FILENAME)
+    curs = conn.cursor()
+    curs.execute('''UPDATE Protein SET IonChannelClassDesc = ? WHERE UniProtAccNum = ?''',
+        (ion_channel_class_desc, uniprot_accnum))
+    conn.commit()
+    conn.close()
+
+def update_protein_ion_channel_sub_class(uniprot_accnum, ion_channel_sub_class):
+    conn = sqlite3.connect(DB_FILENAME)
+    curs = conn.cursor()
+    curs.execute('''UPDATE Protein SET IonChannelSubClass = ? WHERE UniProtAccNum = ?''',
+        (ion_channel_sub_class, uniprot_accnum))
+    conn.commit()
+    conn.close()
+
 def lookup_uniprot_accnum_by_gene_symbol(gene_symbol):
     conn = sqlite3.connect(DB_FILENAME)
     curs = conn.cursor()
@@ -431,6 +526,35 @@ def lookup_compound_by_name(compound_name):
         result = ''
     else:
         result = resultset[0]
+    conn.close()
+    return result
+
+
+    curs.execute('''CREATE TABLE Compound(
+        Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+        SMILES TEXT NOT NULL,
+        InChI TEXT NOT NULL,
+        Name TEXT NOT NULL,
+        ChemblId TEXT NOT NULL,
+        Synonyms TEXT NOT NULL,
+        ApprovalStatus TEXT NOT NULL,
+        FirstApprovalYear TEXT NOT NULL,
+        SourceDBName NOT NULL
+        );''')
+
+
+def lookup_compound_by_id(id):
+    conn = sqlite3.connect(DB_FILENAME)
+    curs = conn.cursor()
+    curs.execute('''SELECT Id, SMILES, InChI, Name, ChemblId, Synonyms,
+            ApprovalStatus, FirstApprovalYear, SourceDBName
+            FROM Compound WHERE Id=?''', 
+        (id,))
+    resultset = curs.fetchone()
+    if resultset == None:
+        result = ''
+    else:
+        result = resultset
     conn.close()
     return result
 
@@ -516,8 +640,33 @@ def setup_ion_channels():
         #check_gene_symbol = lookup_gene_symbol_by_uniprot_accnum(uniprot_accnum)
         #if check_gene_symbol != '':
         #    print 'Dup:', uniprot_accnum, check_gene_symbol
-        add_protein(uniprot_accnum, gene_symbol, name, process_function, ions,
-                gating, in_betse, ion_channel_subclass)
+        
+        if not exists_protein(uniprot_accnum):
+            add_protein(uniprot_accnum, gene_symbol, name, process_function, ions,
+                    gating, in_betse, ion_channel_subclass)
+            pass
+        
+        else:
+            old_protein_record = lookup_protein_by_accnum(uniprot_accnum)
+            old_uniprot_accnum = old_protein_record[0]
+            old_gene_symbol = old_protein_record[1]
+            old_name = old_protein_record[2]
+            old_process_function = old_protein_record[3]
+            old_ions = old_protein_record[4]
+            old_gating = old_protein_record[5]
+            old_in_betse = old_protein_record[6]
+            old_ion_channel_class_desc = old_protein_record[7]
+            old_ion_channel_subclass = old_protein_record[8]
+            old_chembl_id = old_protein_record[9]
+            
+            update_protein_gene_symbol(uniprot_accnum, gene_symbol)
+            update_protein_name(uniprot_accnum, name)
+            update_protein_process_function(uniprot_accnum, process_function)
+            update_protein_ions(uniprot_accnum, ions)
+            update_protein_gating(uniprot_accnum, gating)
+            update_protein_in_betse(uniprot_accnum, in_betse)
+            update_protein_ion_channel_sub_class(uniprot_accnum, ion_channel_subclass)
+        
         #print 'Added %s' % uniprot_accnum
     prot_file.close()
 
@@ -855,4 +1004,237 @@ def write_db_stats():
         row_count = curs.fetchone()[0]
         print table_name, row_count
         conn.close()
+
+def input_drugbank():
+    drug_info_file = open(OUTPUT_ORGANIZED_DRUG_INFO_DRUGBANK)
+    drug_info_file.next()
+    for line in drug_info_file:
+        drugbank_id = line[0:13].strip()
+        drug_name = line[13:64].strip()
+        status = line[64:121].strip()
+        status_list = status.split(',')
+        molecular_formula = line[121:152].strip()
+        if molecular_formula == 'NONE':
+            molecular_formula = ''
+        inchi_string = line[152:].strip()
+        if inchi_string == 'NONE':
+            inchi_string = ''
+        record = (drugbank_id, drug_name, status_list, molecular_formula,
+                inchi_string)
+    drug_info_file.close()
+    
+    target_info_file = open(OUTPUT_ORGANIZED_TARGET_INFO_DRUGBANK)
+    target_info_file.next()
+    for line in target_info_file:
+        drugbank_id = line[0:13].strip()
+        target_id = line[13:26].strip()
+        category = line[26:39].strip()
+        effect = line[39:80].strip()
+        if effect == 'UNKNOWN':
+            effect = ''
+        uniprot_id = line[80:93].strip()
+        if uniprot_id == 'NONE':
+            uniprot_id = ''
+        target_name = line[93:].strip()
+        record = (drugbank_id, target_id, category, effect, uniprot_id, 
+                target_name)
+    target_info_file.close()
+
+def input_hmdb():
+    drug_info_file = open(OUTPUT_ORGANIZED_DRUG_INFO_HMDB)
+    drug_info_file.next()
+    for line in drug_info_file:
+        hmdb_id = line[0:13].strip()
+        name = line[13:124].strip()
+        molecular_formula = line[124:155].strip()
+        inchi_string = line[155:].strip()
+        record = (hmdb_id, name, molecular_formula, inchi_string)
+    drug_info_file.close()
+
+    target_info_file = open(OUTPUT_ORGANIZED_TARGET_INFO_HMDB)
+    target_info_file.next()
+    for line in target_info_file:
+        hmdb_id = line[0:13].strip()
+        target_id = line[13:26].strip()
+        uniprot_id = line[26:39].strip()
+        target_name = line[39:].strip()
+        record = (hmdb_id, target_id, uniprot_id, target_name)
+    target_info_file.close()
+
+def input_ttd():
+    ttd_file = open(OUTPUT_ORGANIZED_TTD)
+    ttd_file.next()
+    for line in ttd_file:
+        target_id = line[0:13].strip()
+        uniprot_id = line[13:26].strip()
+        if uniprot_id == 'UniProt-NONE':
+            uniprot_id = ''
+        target_name = line[26:82].strip()
+        drug_type = line[82:95].strip()
+        chembl_id = line[95:111].strip()
+        if chembl_id == 'UNKNOWN':
+            chembl_id = ''
+        ttd_drug_id = line[111:124].strip()
+        drug_name = line[124:210].strip()
+        inchi = line[210:].strip()
+        if inchi == 'InChI-NONE':
+            inchi = ''
+        record = (target_id, uniprot_id, target_name, drug_type, chembl_id,
+                ttd_drug_id, drug_name, inchi)
+    ttd_file.close()
+
+def input_chembl_uniprot():
+    compound_file = open(OUTPUT_QUERY_CHEMBL_UNIPROT_COMPOUND)
+    for line in compound_file:
+        accession = line[0:14].strip()
+        pref_name = line[14:96].strip()
+        target_chembl_id = line[96:114].strip()
+        
+        # Is this a new target?
+        # If yes, add it to the database
+        # If no, check values match, updating if necessary
+        
+        if exists_protein(accession):
+            protein_record = lookup_protein_by_accnum(accession)
+            if protein_record[2] == '':
+                update_protein_name(accession, pref_name)
+            if protein_record[9] == '':
+                update_protein_chembl_id(accession, target_chembl_id)
+        else:
+            add_protein(accession, name=pref_name)
+        
+        compound_chembl_id = line[114:132].strip()
+        compound_name = line[132:334].strip()
+        first_approval = line[334:342].strip()
+        withdrawn_flag = line[342:346].strip()
+        standard_inchi = line[346:].strip()
+        
+        # Is this a new compound?
+        # If yes, add it to the database
+        # If no, check values match, updating if necessary
+        
+        if exists_compound(compound_chembl_id):
+            compound_id = lookup_compound_by_chembl_id(compound_chembl_id)
+            compound_record = lookup_compound_by_id(compound_id)
+        else:
+            if withdrawn_flag == '1':
+                approval_status = 'WITHDRAWN'
+            else:
+                approval_status = ''
+            add_compound('', standard_inchi, compound_name,
+                    chembl_id=compound_chembl_id,
+                    first_approval_year=first_approval,
+                    approval_status=approval_status, sourcedb_name=EXTDB_CHEMBL)
+
+        # Add an interaction record for the (target, compound) pair
+        
+        # INCOMPLETE
+        
+    compound_file.close()
+    drug_file = open(OUTPUT_QUERY_CHEMBL_UNIPROT_DRUG)
+    for line in drug_file:
+        accession = line[0:14].strip()
+        pref_name = line[14:66].strip()
+        target_chembl_id = line[66:84].strip()
+        
+        # Is this a new target?
+        # If yes, add it to the database
+        # If no, check values match, updating if necessary
+        
+        # INCOMPLETE
+        
+        compound_chembl_id = line[114:132].strip()
+        compound_chembl_id = line[84:102].strip()
+        compound_name = line[102:134].strip()
+        first_approval = line[134:141].strip()
+        withdrawn_flag = line[141:145].strip()
+        mechanism_of_action = line[145:197].strip()
+        action_type = line[197:229].strip()
+        standard_inchi = line[229:].strip()
+        
+        # Is this a new compound?
+        # If yes, add it to the database
+        # If no, check values match, updating if necessary
+        
+        # INCOMPLETE
+        
+        # Add an interaction record for the (target, compound) pair
+        
+        # INCOMPLETE
+        
+    drug_file.close()
+
+def input_chembl_assays():
+    compound_file = open(OUTPUT_COMPOUND_ASSAYS)
+    for line in compound_file:
+        line_split = line.split('\t')
+        uniprot = line_split[0].strip()
+        target_chembl_id = line_split[1].strip()
+        target_type = line_split[2].strip()
+        target_name = line_split[3].strip()
+        compound_chembl_id = line_split[4].strip()
+        compound_name = line_split[5].strip()
+        iupac_name = line_split[6].strip()
+        assay_chembl_id = line_split[7].strip()
+        assay_standard_type = line_split[8].strip()
+        assay_standard_relation = line_split[9].strip()
+        assay_value = line_split[10].strip()
+        assay_units = line_split[11].strip()
+        assay_type = line_split[12].strip() # Not used
+        assay_description = line_split[13].strip() # Not used
+        
+        if not exists_compound(compound_chembl_id):
+            add_compound('', '', compound_name, chembl_id=compound_chembl_id,
+                    synonyms=iupac_name, sourcedb_name=EXTDB_CHEMBL)
+        
+        if not exists_protein(uniprot):
+            add_protein(uniprot, name=target_name,
+                    process_function=target_type, chembl_id=target_chembl_id)
+    
+        compound_id = lookup_compound_by_chembl_id(compound_chembl_id)
+
+        if not exists_interaction(uniprot, compound_id):
+            add_interaction(uniprot, compound_id,
+                    action_type=target_type.decode('utf_8').encode('utf_8'),
+                    strength=assay_value.decode('utf_8').encode('utf_8'),
+                    strength_units=assay_units.decode('utf_8').encode('utf_8'),
+                    assay_type=assay_standard_type.decode('utf_8').encode('utf_8'),
+                    chembl_id=assay_chembl_id,
+                    sourcedb_name=EXTDB_CHEMBL)
+                    
+        if assay_standard_relation != '=':
+            print 'Assay standard relation is not ='
+
+    return
+    
+    # INCOMPLETE
+
+    compound_file.close()
+    drug_file = open(OUTPUT_DRUG_ASSAYS)
+    for line in drug_file:
+        line_split = line.split('\t')
+        uniprot = line_split[0].strip()
+        target_chembl_id = line_split[1].strip()
+        target_type = line_split[2].strip()
+        target_name = line_split[3].strip()
+        drug_mechanism = line_split[4].strip()
+        dosed_compound_chembl_id = line_split[5].strip()
+        dosed_compound_name = line_split[6].strip()
+        active_compound_chembl_id = line_split[7].strip()
+        active_compound_name = line_split[8].strip()
+        assay_chembl_id = line_split[9].strip()
+        assay_standard_type = line_split[10].strip()
+        assay_standard_relation = line_split[11].strip()
+        assay_value = line_split[12].strip()
+        assay_units = line_split[13].strip()
+        assay_type = line_split[14].strip()
+        assay_description = line_split[15].strip()
+
+        if not exists_compound(dosed_compound_chembl_id):
+            add_compound('', '', dosed_compound_name,
+                    chembl_id=dosed_compound_chembl_id,
+                    sourcedb_name=EXTDB_CHEMBL)
+
+    drug_file.close()
+
 
