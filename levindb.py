@@ -378,6 +378,32 @@ def lookup_protein_by_accnum(accnum):
     conn.close()
     return result
 
+def lookup_interaction_ids_by_uniprot(accnum):
+    conn = sqlite3.connect(DB_FILENAME)
+    curs = conn.cursor()
+    curs.execute('''SELECT Id FROM Interaction WHERE TargetUniProtAccNum=?''', 
+        (accnum,))
+    resultset = curs.fetchall()
+    conn.close()
+    return resultset
+
+def lookup_expression_ids_by_uniprot(accnum):
+    conn = sqlite3.connect(DB_FILENAME)
+    curs = conn.cursor()
+    curs.execute('''SELECT Id FROM Expression WHERE ProteinUniProtAccNum=?''', 
+        (accnum,))
+    resultset = curs.fetchall()
+    conn.close()
+    return resultset
+
+def get_all_protein_uniprot():
+    conn = sqlite3.connect(DB_FILENAME)
+    curs = conn.cursor()
+    curs.execute('''SELECT UniProtAccNum FROM Protein''')
+    resultset = curs.fetchall()
+    conn.close()
+    return resultset
+
 def update_protein_name(uniprot_accnum, name):
     conn = sqlite3.connect(DB_FILENAME)
     curs = conn.cursor()
@@ -611,25 +637,30 @@ def cleanup_dbtissue():
     conn.commit()
     conn.close()
 
+def remove_nonascii(s):
+    return s.encode('ascii', errors='ignore')
+
 def setup_ion_channels():
     prot_file = open(PROTEIN_FILENAME, 'rU')
-    prot_reader = unicodecsv.reader(prot_file, encoding='utf-8')
+    #prot_reader = unicodecsv.reader(prot_file, encoding='utf-8')
+    prot_reader = csv.reader(prot_file)
     prot_reader.next()
     for row in prot_reader:
         name = row[2]
-        process_function = row[3]
+        #process_function = remove_nonascii(row[3])
+        process_function = ''
         #if process_function.startswith('NOT AN ION CHANNEL'):
         #    continue
         uniprot_accnum = row[0]
         if uniprot_accnum == '':
             continue
-        if not uniprot_accnum[0] in ['O', 'P', 'Q']:
-            continue
+        #if not uniprot_accnum[0] in ['O', 'P', 'Q']:
+        #    continue
         gene_symbol = row[1]
         if gene_symbol == '-':
             gene_symbol = ''
-        if gene_symbol == '':
-            continue
+        #if gene_symbol == '':
+        #    continue
         ions = row[4]
         gating = row[5]
         ion_channel_subclass = row[6]
@@ -661,7 +692,7 @@ def setup_ion_channels():
             
             update_protein_gene_symbol(uniprot_accnum, gene_symbol)
             update_protein_name(uniprot_accnum, name)
-            update_protein_process_function(uniprot_accnum, process_function)
+            #update_protein_process_function(uniprot_accnum, process_function)
             update_protein_ions(uniprot_accnum, ions)
             update_protein_gating(uniprot_accnum, gating)
             update_protein_in_betse(uniprot_accnum, in_betse)
@@ -870,6 +901,8 @@ def process_biogps_microarray(annot_dict):
             expr_level = float(row[i + 1])
             tissue_name = lookup_dbtissue('biogps', tissue_list[i])
             for uniprot_accnum in uniprot_accnum_list:
+                #if uniprot_accnum in ['Q12809', 'Q6U279', 'Q6U283', 'Q6U287', 'Q86U57']:
+                #    print uniprot_accnum, expr_level
                 uniprot_accnum = uniprot_accnum[0]
                 add_expression(tissue_name, uniprot_accnum, expr_level, 
                         assay_type='microarray', dataset_name=BIOGPS_DATASET, 
@@ -1004,6 +1037,23 @@ def write_db_stats():
         row_count = curs.fetchone()[0]
         print table_name, row_count
         conn.close()
+        
+    useful_data_points = 0
+    uniprot_list = get_all_protein_uniprot()
+    for uniprot in uniprot_list:
+        uniprot = uniprot[0]
+        interaction_id_list = lookup_interaction_ids_by_uniprot(uniprot)
+        expression_id_list = lookup_expression_ids_by_uniprot(uniprot)
+        if len(interaction_id_list) > 0 and len(expression_id_list) > 0:
+            useful_data_points += 1
+    print 'Protein with interaction and expression %d' % useful_data_points
+
+    #uniprot_list = get_all_protein_uniprot()
+    #for uniprot in uniprot_list:
+    #    uniprot = uniprot[0]
+    #    gene_symbol = lookup_gene_symbol_by_uniprot_accnum(uniprot)
+    #    print uniprot, gene_symbol
+
 
 def input_drugbank():
     drug_info_file = open(OUTPUT_ORGANIZED_DRUG_INFO_DRUGBANK)
@@ -1184,8 +1234,14 @@ def input_chembl_assays():
         assay_description = line_split[13].strip() # Not used
         
         if not exists_compound(compound_chembl_id):
-            add_compound('', '', compound_name, chembl_id=compound_chembl_id,
-                    synonyms=iupac_name, sourcedb_name=EXTDB_CHEMBL)
+            #add_compound('', '', compound_name.decode('utf_8').encode('utf_8'), 
+            #        chembl_id=compound_chembl_id.decode('utf_8').encode('utf_8'),
+            #        synonyms=iupac_name.decode('utf_8').encode('utf_8'),
+            #        sourcedb_name=EXTDB_CHEMBL)
+            add_compound('', '', compound_name, 
+                    chembl_id=compound_chembl_id,
+                    synonyms=iupac_name,
+                    sourcedb_name=EXTDB_CHEMBL)
         
         if not exists_protein(uniprot):
             add_protein(uniprot, name=target_name,
@@ -1194,6 +1250,17 @@ def input_chembl_assays():
         compound_id = lookup_compound_by_chembl_id(compound_chembl_id)
 
         if not exists_interaction(uniprot, compound_id):
+            #if uniprot in ['Q12809', 'Q6U279', 'Q6U283', 'Q6U287', 'Q86U57']:
+            #    print uniprot, assay_value
+
+            #add_interaction(uniprot, compound_id,
+            #        action_type=target_type.decode('utf_8').encode('utf_8'),
+            #        strength=assay_value.decode('utf_8').encode('utf_8'),
+            #        strength_units=assay_units.decode('utf_8').encode('utf_8'),
+            #        assay_type=assay_standard_type.decode('utf_8').encode('utf_8'),
+            #        chembl_id=assay_chembl_id,
+            #        sourcedb_name=EXTDB_CHEMBL)
+
             add_interaction(uniprot, compound_id,
                     action_type=target_type.decode('utf_8').encode('utf_8'),
                     strength=assay_value.decode('utf_8').encode('utf_8'),
@@ -1201,6 +1268,7 @@ def input_chembl_assays():
                     assay_type=assay_standard_type.decode('utf_8').encode('utf_8'),
                     chembl_id=assay_chembl_id,
                     sourcedb_name=EXTDB_CHEMBL)
+
                     
         if assay_standard_relation != '=':
             print 'Assay standard relation is not ='
