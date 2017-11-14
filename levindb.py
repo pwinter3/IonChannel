@@ -345,6 +345,38 @@ def exists_interaction(uniprot_accnum, compound_id):
     else:
         return False
 
+def find_prots_where_expr_and_inter():
+    conn = sqlite3.connect(DB_FILENAME)
+    curs = conn.cursor()
+    curs.execute('''SELECT WHERE (EXISTS(SELECT 1 FROM Interaction
+            WHERE TargetUniProtAccNum=? AND CompoundId=? LIMIT 1) AND 
+            (EXISTS(SELECT 1 FROM Expression
+            WHERE ProteinUniprotAccNum=? AND CompoundId=? LIMIT 1))''')
+
+def exists_any_interaction(uniprot_accnum):
+    conn = sqlite3.connect(DB_FILENAME)
+    curs = conn.cursor()
+    curs.execute('''SELECT EXISTS(SELECT 1 FROM Interaction
+            WHERE TargetUniProtAccNum=? LIMIT 1)''',
+            (uniprot_accnum,))
+    row = curs.fetchone()
+    if row[0] == 1:
+        return True
+    else:
+        return False
+
+def exists_expression(upac):
+    conn = sqlite3.connect(DB_FILENAME)
+    curs = conn.cursor()
+    curs.execute('''SELECT EXISTS(SELECT 1 FROM Expression
+            WHERE ProteinUniProtAccNum=? LIMIT 1)''',
+            (upac,))
+    row = curs.fetchone()
+    if row[0] == 1:
+        return True
+    else:
+        return False
+
 def dump_proteins():
     conn = sqlite3.connect(DB_FILENAME)
     curs = conn.cursor()
@@ -378,6 +410,19 @@ def lookup_protein_by_accnum(accnum):
     conn.close()
     return result
 
+def is_in_betse(accnum):
+    conn = sqlite3.connect(DB_FILENAME)
+    curs = conn.cursor()
+    curs.execute('''SELECT InBETSE FROM Protein WHERE UniProtAccNum=?''', 
+        (accnum,))
+    resultset = curs.fetchone()
+    if resultset == None:
+        result = 'N'
+    else:
+        result = resultset[0]
+    conn.close()
+    return result
+
 def lookup_interaction_ids_by_uniprot(accnum):
     conn = sqlite3.connect(DB_FILENAME)
     curs = conn.cursor()
@@ -396,10 +441,43 @@ def lookup_expression_ids_by_uniprot(accnum):
     conn.close()
     return resultset
 
+def lookup_expression(upac, tissue):
+    conn = sqlite3.connect(DB_FILENAME)
+    curs = conn.cursor()
+    curs.execute('''SELECT ExprLevel FROM Expression WHERE ProteinUniProtAccNum=? AND TissueName=?''', 
+        (upac, tissue))
+    resultset = curs.fetchall()
+    conn.close()
+    return resultset
+
 def get_all_protein_uniprot():
     conn = sqlite3.connect(DB_FILENAME)
     curs = conn.cursor()
     curs.execute('''SELECT UniProtAccNum FROM Protein''')
+    resultset = curs.fetchall()
+    conn.close()
+    return resultset
+
+def get_all_tissues():
+    conn = sqlite3.connect(DB_FILENAME)
+    curs = conn.cursor()
+    curs.execute('''SELECT Name FROM Tissue''')
+    resultset = curs.fetchall()
+    conn.close()
+    return resultset
+
+def get_all_expression():
+    conn = sqlite3.connect(DB_FILENAME)
+    curs = conn.cursor()
+    curs.execute('''SELECT Id, TissueName, ProteinUniprotAccNum, ExprLevel FROM Expression''')
+    resultset = curs.fetchall()
+    conn.close()
+    return resultset
+    
+def get_interaction_by_uniprot(upac):
+    conn = sqlite3.connect(DB_FILENAME)
+    curs = conn.cursor()
+    curs.execute('''SELECT Id FROM Interaction WHERE TargetUniprotAccNum = ?''', (upac,))
     resultset = curs.fetchall()
     conn.close()
     return resultset
@@ -584,6 +662,16 @@ def lookup_compound_by_id(id):
     conn.close()
     return result
 
+def lookup_interaction_by_uniprot(upac):
+    conn = sqlite3.connect(DB_FILENAME)
+    curs = conn.cursor()
+    curs.execute('''SELECT Id FROM Interaction WHERE TargetUniprotAccNum=?''', 
+        (upac,))
+    resultset = curs.fetchall()
+    result = resultset
+    conn.close()
+    return result
+
 def setup_externaldb():
     add_externaldb('biogps', 'http://biogps.org')
     add_externaldb('chembl', 'https://www.ebi.ac.uk/chembl/')
@@ -695,7 +783,16 @@ def setup_ion_channels():
             #update_protein_process_function(uniprot_accnum, process_function)
             update_protein_ions(uniprot_accnum, ions)
             update_protein_gating(uniprot_accnum, gating)
-            update_protein_in_betse(uniprot_accnum, in_betse)
+            if old_in_betse == '':
+                if in_betse == 'yes':
+                    in_betse = 'Y'
+                elif in_betse == 'soon':
+                    in_betse = '?'
+                elif in_betse == 'doable':
+                    in_betse = '?'
+                else:
+                    in_betse = 'N'
+                update_protein_in_betse(uniprot_accnum, in_betse)
             update_protein_ion_channel_sub_class(uniprot_accnum, ion_channel_subclass)
         
         #print 'Added %s' % uniprot_accnum
@@ -1262,7 +1359,7 @@ def input_chembl_assays():
             #        sourcedb_name=EXTDB_CHEMBL)
 
             add_interaction(uniprot, compound_id,
-                    action_type=target_type.decode('utf_8').encode('utf_8'),
+                    action_type='',
                     strength=assay_value.decode('utf_8').encode('utf_8'),
                     strength_units=assay_units.decode('utf_8').encode('utf_8'),
                     assay_type=assay_standard_type.decode('utf_8').encode('utf_8'),
@@ -1272,10 +1369,6 @@ def input_chembl_assays():
                     
         if assay_standard_relation != '=':
             print 'Assay standard relation is not ='
-
-    return
-    
-    # INCOMPLETE
 
     compound_file.close()
     drug_file = open(OUTPUT_DRUG_ASSAYS)
@@ -1298,11 +1391,142 @@ def input_chembl_assays():
         assay_type = line_split[14].strip()
         assay_description = line_split[15].strip()
 
-        if not exists_compound(dosed_compound_chembl_id):
-            add_compound('', '', dosed_compound_name,
-                    chembl_id=dosed_compound_chembl_id,
+        if not exists_compound(active_compound_chembl_id):
+            add_compound('', '', active_compound_name, 
+                    chembl_id=active_compound_chembl_id,
+                    synonyms=dosed_compound_name,
+                    sourcedb_name=EXTDB_CHEMBL)
+        
+        if not exists_protein(uniprot):
+            add_protein(uniprot, name=target_name,
+                    process_function=target_type, chembl_id=target_chembl_id)
+
+        compound_id = lookup_compound_by_chembl_id(active_compound_chembl_id)
+
+        if not exists_interaction(uniprot, compound_id):
+            add_interaction(uniprot, compound_id,
+                    action_type=drug_mechanism.decode('utf_8').encode('utf_8'),
+                    strength=assay_value.decode('utf_8').encode('utf_8'),
+                    strength_units=assay_units.decode('utf_8').encode('utf_8'),
+                    assay_type=assay_standard_type.decode('utf_8').encode('utf_8'),
+                    chembl_id=assay_chembl_id,
                     sourcedb_name=EXTDB_CHEMBL)
 
     drug_file.close()
+
+def write_important_data():
+
+    tissue_name_list = []
+    tissue_record_list = get_all_tissues()
+    for tissue in tissue_record_list:
+        tissue_name = tissue[0]
+        tissue_name_list.append(tissue_name)
+    protein_upac_list = []
+    protein_record_list = get_all_protein_uniprot()
+    for protein_record in protein_record_list:
+        upac = protein_record[0]
+        has_expression = exists_expression(upac)
+        has_interaction = exists_any_interaction(upac)
+        if has_expression and has_interaction:
+            protein_upac_list.append(upac)
+    line = 'Uniprot Accession,Gene Symbol,Number of interacting compounds,In BETSE?,'
+    for tissue_name in tissue_name_list:
+        line += tissue_name
+        line += ','
+    print line
+    for upac in protein_upac_list:
+        line = ''
+        line += upac
+        line += ','
+        line += lookup_gene_symbol_by_uniprot_accnum(upac)
+        line += ','
+        number_of_interacting_compounds = len(lookup_interaction_by_uniprot(upac))
+        line += '%d' % number_of_interacting_compounds
+        line += ','
+        in_betse_yn = is_in_betse(upac)
+        line += in_betse_yn
+        line += ','
+        for tissue_name in tissue_name_list:
+            expr_level_list = lookup_expression(upac, tissue_name)
+            total_expr_level = 0.0
+            for expr_level in expr_level_list:
+                total_expr_level += float(expr_level[0])
+            avg_expr_level = total_expr_level / float(len(expr_level_list))
+            line += '%.2f' % avg_expr_level
+            line += ','
+        print line
+        
+
+
+#expressed_protein_dict = {}
+#tissue_list = get_all_tissues()
+#for tissue in tissue_list:
+#    tissue_name = tissue[0]
+#    expression_record_list = get_all_expression()
+#    for expression_record in expression_record_list:
+#        expression_id = expression_record[0]
+#        expression_tissue_name = expression_record[1]
+#        expression_protein_uniprot_accnum = expression_record[2]
+#        if expression_tissue_name == tissue_name:
+#            if not expression_protein_uniprot_accnum in expressed_protein_dict:
+#                if exists_any_interaction(expression_protein_uniprot_accnum):
+#                    expressed_protein_dict[expression_protein_uniprot_accnum] = 1
+#for protein in expressed_protein_list:
+#    line = ''
+#    line += expression_protein_uniprot_accnum + ','
+#    expression_record_list = get_all_expression()
+#    for expression_record in expression_record_list:
+#        expression_id = expression_record[0]
+#        expression_tissue_name = expression_record[1]
+#        expression_protein_uniprot_accnum = expression_record[2]
+#        expression_level = expression_record[3]
+#        line += expression_level + ','
+#    print line
+
+#   myresults = form.cleaned_data
+#    tissue_selection = myresults['tissue_mc']
+#    tissue_selection.sort()
+#    protein_selection = myresults['protein_mc']
+#
+#    protein_label_list = []
+#    protein_label_dict = {}
+#    for upac in protein_selection:
+#        protein = Protein.objects.get(uniprotaccnum=upac)
+#        ic_subclass = protein.ionchannelsubclass
+#        #ic_class = Channelsubclass.objects.get(name=ic_subclass).class_field
+#        #ic_superclass = Channelclass.objects.get(name=ic_class).superclass
+#        protein_label = '%s (%s)' % (protein.uniprotaccnum, protein.genesymbol)
+#        protein_label_list.append(protein_label)
+#        protein_label_dict[protein_label] = upac
+#    protein_label_list.sort()
+#
+#    final_results = []
+#    for tissue_name in tissue_selection:
+#        for protein_label in protein_label_list:
+#            upac = protein_label_dict[protein_label]
+#            expression_level_qs = Expression.objects.filter(tissuename=tissue_name).filter(proteinuniprotaccnum=upac)
+#            if len(expression_level_qs) < 1:
+#                expression_level = '0.00'
+#            else:
+#                expression_level = expression_level_qs[0].exprlevel
+#            interaction_qs = Interaction.objects.filter(targetuniprotaccnum=upac)
+#            if len(interaction_qs) > 0:
+#                for interaction in interaction_qs:
+#                    compound_id = interaction.compoundid
+#                    compound_record = Compound.objects.get(id=compound_id)
+#                    compound_name = compound_record.name
+#                    compound_chemblid = compound_record.chemblid
+#                    compound_label = '%s (%s)' % (compound_name, compound_chemblid)
+#                    effect_type = ''
+#                    param_type = interaction.assaytype
+#                    param_value = '%.2f' % interaction.strength
+#
+#                    final_results.append([tissue_name, protein_label, expression_level,
+#                            compound_label, effect_type, param_type, param_value])
+#            else:
+#                final_results.append([tissue_name, protein_label, expression_level,
+#                            '', '', '', ''])
+
+
 
 

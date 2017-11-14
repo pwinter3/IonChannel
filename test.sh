@@ -21,6 +21,8 @@ python -c "from levindb import *;setup_channel_classes()"
 python -c "from levindb import *;dump_database()"
 python -c "from levindb import *;write_db_stats()"
 
+python -c "from levindb import *;write_important_data()"
+
 # Not implemented or deprecated:
 #python -c "from levindb import *;setup_target_compound()"
 #python -c "from levindb import *;input_drugbank()"
@@ -30,3 +32,5 @@ python -c "from levindb import *;write_db_stats()"
 #python -c "from levindb import *;setup_chembl()"
 #python -c "from levindb import *;setup_all_proteins()"
 #python -c "from levindb import *;get_expression_prob_for_all_tissues()"
+
+set +x
