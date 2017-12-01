@@ -31,9 +31,15 @@ OUTPUT_QUERY_CHEMBL_UNIPROT_DRUG = 'data/Target-CompoundTables-2017-01/output-qu
 OUTPUT_COMPOUND_ASSAYS = 'data/Chembl-query_2017-08-16/output_compound-assays_v1.1.dat'
 OUTPUT_DRUG_ASSAYS = 'data/Chembl-query_2017-08-16/output_drug-assays_v1.1.dat'
 
+HPA_RNA_TISSUE = 'data/hpa/rna_tissue.tsv'
+UNIPROT_ENSEMBL_MAPPING = 'data/uniprot/HUMAN_9606_idmapping_Ensembl.dat'
+HPA_TISSUE_TRANSLATION_TABLE = 'data/hpa/hpa_tissue_translation_table.csv'
+
 EXTDB_BIOGPS = 'biogps'
 EXTDB_CHEMBL = 'chembl'
+EXTDB_HPA = 'hpa'
 BIOGPS_DATASET = 'U133AGNF1B'
+HPA_DATASET = 'HPA_rna_tissue'
 
 def create_tables():
     conn = sqlite3.connect(DB_FILENAME)
@@ -1010,6 +1016,46 @@ def process_biogps_microarray(annot_dict):
 def process_biogps_data():
     annot_dict = process_biogps_annotation()
     process_biogps_microarray(annot_dict)
+
+
+def process_protein_atlas_data():
+    ensembl_to_uniprot = {}
+    fmap = open(UNIPROT_ENSEMBL_MAPPING)
+    for line in fmap:
+        row = line.strip().split('\t')
+        upac = row[0]
+        ensg = row[2]
+        ensembl_to_uniprot[ensg] = upac
+    fmap.close()
+    
+    tissue_to_bto = {}
+    ftissue = open(HPA_TISSUE_TRANSLATION_TABLE)
+    rtissue = csv.reader(ftissue)
+    rtissue.next()
+    for row in rtissue:
+        hpa_tissue = row[0]
+        bto_tissue = row[1]
+        tissue_to_bto[hpa_tissue] = bto_tissue
+    ftissue.close()
+    
+    fhpa = open(HPA_RNA_TISSUE)
+    fhpa.next()
+    for line in fhpa:
+        row = line.strip().split('\t')
+        if len(row) < 5 or row[0].strip() == '':
+            continue
+        ensg = row[0]
+        if not ensg in ensembl_to_uniprot:
+            continue
+        upac = ensembl_to_uniprot[ensg]
+        gene_name = row[1]
+        tissue = row[2]
+        tissue_bto = tissue_to_bto[tissue]
+        value = row[3]
+        if exists_protein(upac):
+            add_expression(tissue_bto, upac, value, assay_type='RNA-seq',
+                    dataset_name=HPA_DATASET, sourcedb_name=EXTDB_HPA)
+    fhpa.close()
 
 def cleanup_expression():
     conn = sqlite3.connect(DB_FILENAME)
