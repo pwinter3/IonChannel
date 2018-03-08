@@ -1051,7 +1051,7 @@ def process_protein_atlas_data():
         gene_name = row[1]
         tissue = row[2]
         tissue_bto = tissue_to_bto[tissue]
-        value = row[3]
+        value = float(row[3])
         if exists_protein(upac):
             add_expression(tissue_bto, upac, value, assay_type='RNA-seq',
                     dataset_name=HPA_DATASET, sourcedb_name=EXTDB_HPA)
