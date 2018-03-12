@@ -1,65 +1,74 @@
-import sqlite3
+import codecs
 import csv
-import unicodecsv
 import go_obo_parser
 import os
-import codecs
+import sqlite3
+import unicodecsv
 
-DB_FILENAME = 'levin.db'
-OBO_FILENAME = 'data/bto/BrendaTissueOBO.obo'
-TISSUE_FILENAME = 'data/bto/tissues.txt'
-PROTEIN_FILENAME = 'data/go/ion-channels-1.csv'
-GPL96_FILENAME = 'data/geo/GPL96-57554.txt'
-GENBANKUNIPROT_FILENAME = 'data/uniprot/GenBankUniProt.txt' 
-BIOGPS_GCRMA = 'data/biogps/U133AGNF1B.gcrma.avg.csv'
-BIOGPS_GNF1H_ANNOT = 'data/biogps/gnf1h.annot2007.tsv'
-BIOGPS_TRANSLATION_TABLE = 'data/biogps/biogps_translation_table.csv'
-DRUGBANK_FILENAME = 'data/target-compound/output-organized-Drugbank.dat'
-CHEMBL_COMPOUND_FILENAME = \
-        'data/target-compound/output-query_ChEMBL-uniprot-compound.dat'
-TARGET_COMPOUND_FILENAME = 'data/target-compound/target-compound.csv'
-CHANNEL_CLASSES_FILENAME = 'data/channel-classes/channel-classes.csv'
-HUMAN_IDMAPPING = 'data/uniprot/HUMAN_9606_idmapping_Gene_Name.dat'
 
-OUTPUT_ORGANIZED_DRUG_INFO_DRUGBANK = 'data/Target-CompoundTables-2017-01/output-organized_drug-info-Drugbank.dat'
-OUTPUT_ORGANIZED_DRUG_INFO_HMDB = 'data/Target-CompoundTables-2017-01/output-organized_drug-info-HMDB.dat'
-OUTPUT_ORGANIZED_TARGET_INFO_DRUGBANK = 'data/Target-CompoundTables-2017-01/output-organized_target-info-Drugbank.dat'
-OUTPUT_ORGANIZED_TARGET_INFO_HMDB = 'data/Target-CompoundTables-2017-01/output-organized_target-info-HMDB.dat'
-OUTPUT_ORGANIZED_TTD = 'data/Target-CompoundTables-2017-01/output-organized-TTD.dat'
-OUTPUT_QUERY_CHEMBL_UNIPROT_COMPOUND = 'data/Target-CompoundTables-2017-01/output-query_ChEMBL-uniprot-compound.dat'
-OUTPUT_QUERY_CHEMBL_UNIPROT_DRUG = 'data/Target-CompoundTables-2017-01/output-query_ChEMBL-uniprot-drug.dat'
-OUTPUT_COMPOUND_ASSAYS = 'data/Chembl-query_2017-08-16/output_compound-assays_v1.1.dat'
-OUTPUT_DRUG_ASSAYS = 'data/Chembl-query_2017-08-16/output_drug-assays_v1.1.dat'
+# Constants to be stored in db
 
-HPA_RNA_TISSUE = 'data/hpa/rna_tissue.tsv'
-UNIPROT_ENSEMBL_MAPPING = 'data/uniprot/HUMAN_9606_idmapping_Ensembl.dat'
-HPA_TISSUE_TRANSLATION_TABLE = 'data/hpa/hpa_tissue_translation_table.csv'
-
+DATASET_BIOGPS = 'U133AGNF1B'
+DATASET_HPA = 'hpa'
+ASSAY_MICROARRAY = 'microarray'
+ASSAY_RNASEQ = 'RNA-seq'
 EXTDB_BIOGPS = 'biogps'
+EXTDB_BRENDA = 'brenda'
+EXTDB_CHANNELPEDIA = 'channelpedia'
 EXTDB_CHEMBL = 'chembl'
+EXTDB_DRUGBANK = 'drugbank'
+EXTDB_HMDB = 'hmdb'
 EXTDB_HPA = 'hpa'
-BIOGPS_DATASET = 'U133AGNF1B'
-HPA_DATASET = 'HPA_rna_tissue'
+EXTDB_ZINC15 = 'zinc15'
+
+
+# Constant paths
+
+PATH_BIOGPS_GCRMA = 'data/biogps/U133AGNF1B.gcrma.avg.csv'
+PATH_BIOGPS_GNF1H_ANNOT = 'data/biogps/gnf1h.annot2007.tsv'
+PATH_BIOGPS_TRANSLATION_TABLE = 'data/biogps/biogps_translation_table.csv'
+PATH_BTO_BRENDA_TISSUE_OBO = 'data/bto/BrendaTissueOBO.obo'
+PATH_BTO_TISSUES = 'data/bto/tissues.txt'
+PATH_CHANNEL_CLASSES = 'data/channel-classes/channel-classes.csv'
+PATH_CHEMBL_ASSAYS_COMPOUND = 'data/chembl-assays/output_compound-assays_v1.1.dat'
+PATH_CHEMBL_ASSAYS_DRUG = 'data/chembl-assays/output_drug-assays_v1.1.dat'
+PATH_CHEMBL_HUMAN_ASSAYS_COMPOUND = 'data/chembl-assays/output_human_compound-assays_v1.1.dat'
+PATH_CHEMBL_HUMAN_ASSAYS_DRUG = 'data/chembl-assays/output_human_drug-assays_v1.1.dat'
+PATH_DB = 'levin.db'
+PATH_GO_ION_CHANNELS = 'data/go/ion-channels-1.csv'
+PATH_GO_QUICKGO = 'data/go/QuickGO-ion-channel-COMBINED-human.dat'
+PATH_HPA_RNA_TISSUE = 'data/hpa/rna_tissue.tsv'
+PATH_HPA_TRANSLATION_TABLE = 'data/hpa/hpa_tissue_translation_table.csv'
+PATH_TARGET_COMPOUND = 'data/target-compound/target-compound.csv'
+PATH_TC_CHEMBL_COMPOUND = 'data/target-compound/output-query_ChEMBL-uniprot-compound.dat'
+PATH_TC_CHEMBL_DRUG = 'data/target-compound/output-query_ChEMBL-uniprot-drug.dat'
+PATH_TC_DRUG_INFO_DRUGBANK = 'data/target-compound/output-organized_drug-info-Drugbank.dat'
+PATH_TC_DRUG_INFO_HMDB = 'data/target-compound/output-organized_drug-info-HMDB.dat'
+PATH_TC_TARGET_INFO_DRUGBANK = 'data/target-compound/output-organized_target-info-Drugbank.dat'
+PATH_TC_TARGET_INFO_HMDB = 'data/target-compound/output-organized_target-info-HMDB.dat'
+PATH_TC_TTD = 'data/target-compound/output-organized-TTD.dat'
+PATH_UNIPROT_ENSEMBL_IDMAPPING = 'data/uniprot/HUMAN_9606_idmapping_Ensembl.dat'
+PATH_UNIPROT_GENBANK = 'data/uniprot/GenBankUniProt.txt' 
+PATH_UNIPROT_HUMAN_IDMAPPING = 'data/uniprot/HUMAN_9606_idmapping.dat'
+
+
+# Table definitions
 
 def create_tables():
-    conn = sqlite3.connect(DB_FILENAME)
+    conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
     curs.execute('''CREATE TABLE ChannelSuperClass(
-        Name TEXT PRIMARY KEY NOT NULL
-        );''')
+        Name TEXT PRIMARY KEY NOT NULL);''')
     curs.execute('''CREATE TABLE ChannelClass(
         Name TEXT PRIMARY KEY NOT NULL,
-        SuperClass TEXT NOT NULL
-        );''')
+        SuperClass TEXT NOT NULL);''')
     curs.execute('''CREATE TABLE ChannelSubClass(
         Name TEXT PRIMARY KEY NOT NULL,
-        Class TEXT NOT NULL
-        );''')
+        Class TEXT NOT NULL);''')
     curs.execute('''CREATE TABLE Tissue(
         Name TEXT PRIMARY KEY NOT NULL,
         BTOId TEXT UNIQUE NOT NULL,
-        ParentTissueName TEXT NOT NULL
-        );''')
+        ParentTissueName TEXT NOT NULL);''')
     curs.execute('''CREATE TABLE Protein(
         UniProtAccNum TEXT PRIMARY KEY NOT NULL,
         GeneSymbol TEXT NOT NULL,
@@ -70,24 +79,20 @@ def create_tables():
         InBETSE TEXT NOT NULL,
         IonChannelClassDesc TEXT NOT NULL,
         IonChannelSubClass TEXT NOT NULL,
-        ChemblId TEXT NOT NULL
-        );''')
+        ChemblId TEXT NOT NULL);''')
     curs.execute('''CREATE TABLE PDB(
         Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
         UniProtAccNum TEXT NOT NULL,
         PDBID TEXT NOT NULL,
-        HumanOnly TEXT NOT NULL
-        );''')
+        HumanOnly TEXT NOT NULL);''')
     curs.execute('''CREATE TABLE ExternalDB(
         Name TEXT PRIMARY KEY NOT NULL,
-        URL TEXT NOT NULL
-        );''')
+        URL TEXT NOT NULL);''')
     curs.execute('''CREATE TABLE DBTissue(
         Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
         ExternalDBName TEXT NOT NULL,
         TissueName TEXT NOT NULL,
-        DBEquivalentTissueName TEXT NOT NULL
-        );''')
+        DBEquivalentTissueName TEXT NOT NULL);''')
     curs.execute('''CREATE TABLE Expression(
         Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
         TissueName TEXT NOT NULL,
@@ -96,30 +101,26 @@ def create_tables():
         ExprUnits TEXT NOT NULL,
         AssayType TEXT NOT NULL,
         DatasetName TEXT NOT NULL,
-        SourceDBName TEXT NOT NULL
-        );''')
+        SourceDBName TEXT NOT NULL);''')
     curs.execute('''CREATE TABLE DBGene(
         Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
         ExternalDBName TEXT NOT NULL,
         GenbankAccNum TEXT NOT NULL,
-        ProbeID TEXT NOT NULL
-        );''')
+        ProbeID TEXT NOT NULL);''')
     curs.execute('''CREATE TABLE GenbankUniprot(
         Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
         GenbankAccNum TEXT NOT NULL,
-        UniProtAccNum TEXT NOT NULL
-        );''')
+        UniProtAccNum TEXT NOT NULL);''')
     curs.execute('''CREATE TABLE Compound(
         Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
         SMILES TEXT NOT NULL,
         InChI TEXT NOT NULL,
         Name TEXT NOT NULL,
-        ChemblId TEXT NOT NULL,
+        ChemblId TEXT NOT NULL UNIQUE,
         Synonyms TEXT NOT NULL,
         ApprovalStatus TEXT NOT NULL,
         FirstApprovalYear TEXT NOT NULL,
-        SourceDBName NOT NULL
-        );''')
+        SourceDBName NOT NULL);''')
     curs.execute('''CREATE TABLE Interaction(
         Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
         TargetUniProtAccNum TEXT NOT NULL,
@@ -130,284 +131,238 @@ def create_tables():
         StrengthUnits TEXT NOT NULL,
         AssayType TEXT NOT NULL,
         ChemblId TEXT NOT NULL,
-        SourceDBName TEXT NOT NULL
-        );''')
+        SourceDBName TEXT NOT NULL);''')
     conn.commit()
     conn.close()
 
-def add_channel_superclass(name):
-    conn = sqlite3.connect(DB_FILENAME)
+
+# Routines for ChannelSuperClass table
+
+def add_channel_super_class(name):
+    conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
     curs.execute('''INSERT INTO ChannelSuperClass (Name)
         VALUES (?)''', (name,))
     conn.commit()
     conn.close()
 
-def add_channel_class(name, superclass):
-    conn = sqlite3.connect(DB_FILENAME)
+def exists_channel_super_class(name):
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''SELECT EXISTS(SELECT 1 FROM ChannelSuperClass
+            WHERE Name=? LIMIT 1)''', (name,))
+    row = curs.fetchone()
+    if row[0] == 1:
+        result = True
+    else:
+        result = False
+    conn.close()
+    return result
+
+
+# Routines for ChannelClass table
+
+def add_channel_class(name, super_class=''):
+    conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
     curs.execute('''INSERT INTO ChannelClass (Name, SuperClass)
-        VALUES (?, ?)''', (name, superclass))
+        VALUES (?, ?)''', (name, super_class))
     conn.commit()
     conn.close()
 
-def add_channel_subclass(name, channel_class):
-    conn = sqlite3.connect(DB_FILENAME)
+def exists_channel_class(name):
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''SELECT EXISTS(SELECT 1 FROM ChannelClass
+            WHERE Name=? LIMIT 1)''', (name,))
+    row = curs.fetchone()
+    if row[0] == 1:
+        result = True
+    else:
+        result = False
+    conn.close()
+    return result
+
+
+# Routines for ChannelSubClass table
+
+def add_channel_sub_class(name, channel_class=''):
+    conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
     curs.execute('''INSERT INTO ChannelSubClass (Name, Class)
         VALUES (?, ?)''', (name, channel_class))
     conn.commit()
     conn.close()
 
-def update_protein_subclass(gene_symbol, subclass):
-    conn = sqlite3.connect(DB_FILENAME)
+def exists_channel_sub_class(name):
+    conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
-    curs.execute('''UPDATE Protein SET IonChannelSubClass = ?
-        WHERE GeneSymbol = ?''', (subclass, gene_symbol))
-    conn.commit()
+    expr_list = []
+    curs.execute('''SELECT EXISTS(SELECT 1 FROM ChannelSubClass
+            WHERE Name=? LIMIT 1)''', (name,))
+    row = curs.fetchone()
+    if row[0] == 1:
+        result = True
+    else:
+        result = False
     conn.close()
+    return result
 
-def add_externaldb(name, url):
-    conn = sqlite3.connect(DB_FILENAME)
+
+# Routines for ExternalDB table
+
+def add_externaldb(name, url=''):
+    conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
     curs.execute('''INSERT INTO ExternalDB (Name, URL)
         VALUES (?, ?)''', (name, url))
     conn.commit()
     conn.close()
 
-def add_tissue(tissue_name, bto_id='', parent_tissue_name=''):
-    conn = sqlite3.connect(DB_FILENAME)
+
+# Routines for Tissue table
+
+def add_tissue(name, bto_id='', parent_tissue_name=''):
+    conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
     curs.execute('''INSERT INTO Tissue (Name, BTOId, ParentTissueName)
-        VALUES (?, ?, ?)''', (tissue_name, bto_id, parent_tissue_name))
+        VALUES (?, ?, ?)''', (name, bto_id, parent_tissue_name))
     conn.commit()
     conn.close()
 
-def add_protein(uniprot_accnum, gene_symbol='', name='', process_function='',
+def get_all_tissues():
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''SELECT Name FROM Tissue''')
+    resultset = curs.fetchall()
+    conn.close()
+    return resultset
+
+def dump_tissues():
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    with codecs.open('tissue_dump.sql', 'w', 'utf-8') as f:
+        for line in conn.iterdump():
+            f.write('%s\n' % line)
+    conn.close()
+
+
+# Routines for Protein table
+
+def add_protein(upac, gene_symbol='', name='', process_function='',
         ions='', gating='', in_betse='', ion_channel_class_desc='',
-        ion_channel_subclass='', chembl_id=''):
-    conn = sqlite3.connect(DB_FILENAME)
+        ion_channel_sub_class='', chembl_id=''):
+    conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
     curs.execute('''INSERT INTO Protein (UniProtAccNum, GeneSymbol,
         Name, ProcessFunction, Ions, Gating, InBETSE, IonChannelClassDesc,
         IonChannelSubClass, ChemblId)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-        (uniprot_accnum, gene_symbol, name, process_function, ions, gating,
-        in_betse, ion_channel_class_desc, ion_channel_subclass, chembl_id))
+        (upac, gene_symbol, name, process_function, ions, gating,
+        in_betse, ion_channel_class_desc, ion_channel_sub_class, chembl_id))
     conn.commit()
     conn.close()
 
-def add_expression(tissue_name, uniprot_accnum, expr_level, expr_units='',
-        assay_type='', dataset_name='', sourcedb_name=''):
-    conn = sqlite3.connect(DB_FILENAME)
+def update_protein_sub_class(upac, sub_class):
+    conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
-    curs.execute('''INSERT INTO Expression (TissueName, ProteinUniProtAccNum,
-        ExprLevel, ExprUnits, AssayType, DatasetName, SourceDBName)
-        VALUES (?, ?, ?, ?, ?, ?, ?)''', (tissue_name, uniprot_accnum,
-        expr_level, expr_units, assay_type, dataset_name, sourcedb_name))
+    curs.execute('''UPDATE Protein SET IonChannelSubClass = ?
+        WHERE UniProtAccNum = ?''', (sub_class, upac))
     conn.commit()
     conn.close()
 
-def add_dbgene(externaldb_name, genbank_accnum, probe_id):
-    conn = sqlite3.connect(DB_FILENAME)
+def update_protein_name(upac, name):
+    conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
-    curs.execute('''INSERT INTO DBGene (ExternalDBName, GenbankAccNum, ProbeID)
-        VALUES (?, ?, ?)''', (externaldb_name, genbank_accnum, probe_id))
+    curs.execute('''UPDATE Protein SET Name = ? WHERE UniProtAccNum = ?''',
+        (name, upac))
     conn.commit()
     conn.close()
 
-def add_genbankuniprot(genbank_accnum, uniprot_accnum):
-    conn = sqlite3.connect(DB_FILENAME)
+def update_protein_chembl_id(upac, chembl_id):
+    conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
-    curs.execute('''INSERT INTO GenbankUniprot (GenbankAccNum, UniProtAccNum)
-        VALUES (?, ?)''', (genbank_accnum, uniprot_accnum))
-    conn.commit()
-    conn.close()    
-
-def add_compound(smiles, inchi, name, chembl_id='', synonyms='',
-        approval_status='', first_approval_year='', sourcedb_name=''):
-    conn = sqlite3.connect(DB_FILENAME)
-    curs = conn.cursor()
-    curs.execute('''INSERT INTO Compound (SMILES, InChI, Name, ChemblId,
-        Synonyms, ApprovalStatus, FirstApprovalYear, SourceDBName)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
-        (smiles, inchi, name, chembl_id, synonyms, approval_status,
-        first_approval_year, sourcedb_name))
-    conn.commit()
-    conn.close()    
-
-def add_interaction(target_uniprot_accnum, compound_id, action_type='',
-        action_desc='', strength=0, strength_units='', assay_type='',
-        chembl_id = '', sourcedb_name = ''):
-    conn = sqlite3.connect(DB_FILENAME)
-    curs = conn.cursor()
-    curs.execute('''INSERT INTO Interaction (TargetUniProtAccNum, CompoundId,
-        ActionType, ActionDesc, Strength, StrengthUnits, AssayType, 
-        ChemblId, SourceDBName)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-        (target_uniprot_accnum, compound_id, action_type, action_desc, 
-        strength, strength_units, assay_type, chembl_id, sourcedb_name))
+    curs.execute('''UPDATE Protein SET ChemblId = ? WHERE UniProtAccNum = ?''',
+        (chembl_id, upac))
     conn.commit()
     conn.close()
 
-def add_dbtissue(externaldb_name, tissue_name, db_equivalent_tissue_name):
-    conn = sqlite3.connect(DB_FILENAME)
+def update_protein_gene_symbol(upac, gene_symbol):
+    conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
-    curs.execute('''INSERT INTO DBTissue (ExternalDBName, TissueName,
-        DBEquivalentTissueName)
-        VALUES (?, ?, ?)''', (externaldb_name, tissue_name, 
-        db_equivalent_tissue_name))
+    curs.execute('''UPDATE Protein SET GeneSymbol = ?
+        WHERE UniProtAccNum = ?''', (gene_symbol, upac))
     conn.commit()
     conn.close()
 
-def exists_genbankuniprot(genbank_accnum, uniprot_accnum):
-    conn = sqlite3.connect(DB_FILENAME)
+def update_protein_process_function(upac, process_function):
+    conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
-    expr_list = []
-    curs.execute('''SELECT EXISTS(SELECT 1 FROM GenbankUniprot
-            WHERE (GenbankAccNum=? AND UniProtAccNum=?) LIMIT 1)''',
-            (genbank_accnum, uniprot_accnum))
-    row = curs.fetchone()
-    if row[0] == 1:
-        return True
-    else:
-        return False
+    curs.execute('''UPDATE Protein SET ProcessFunction = ?
+        WHERE UniProtAccNum = ?''', (process_function, upac))
+    conn.commit()
+    conn.close()
 
-def exists_protein(uniprot_accnum):
-    conn = sqlite3.connect(DB_FILENAME)
+def update_protein_ions(upac, ions):
+    conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
-    expr_list = []
+    curs.execute('''UPDATE Protein SET Ions = ? WHERE UniProtAccNum = ?''',
+        (ions, upac))
+    conn.commit()
+    conn.close()
+
+def update_protein_gating(upac, gating):
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''UPDATE Protein SET Gating = ? WHERE UniProtAccNum = ?''',
+        (gating, upac))
+    conn.commit()
+    conn.close()
+
+def update_protein_in_betse(upac, in_betse):
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''UPDATE Protein SET InBETSE = ? WHERE UniProtAccNum = ?''',
+        (in_betse, upac))
+    conn.commit()
+    conn.close()
+
+def update_protein_ion_channel_class_desc(upac, ion_channel_class_desc):
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''UPDATE Protein SET IonChannelClassDesc = ?
+        WHERE UniProtAccNum = ?''', (ion_channel_class_desc, upac))
+    conn.commit()
+    conn.close()
+
+def update_protein_ion_channel_sub_class(upac, ion_channel_sub_class):
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''UPDATE Protein SET IonChannelSubClass = ?
+        WHERE UniProtAccNum = ?''', (ion_channel_sub_class, upac))
+    conn.commit()
+    conn.close()
+
+def exists_protein(upac):
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
     curs.execute('''SELECT EXISTS(SELECT 1 FROM Protein
-            WHERE UniProtAccNum=? LIMIT 1)''',
-            (uniprot_accnum,))
+            WHERE UniProtAccNum=? LIMIT 1)''', (upac,))
     row = curs.fetchone()
     if row[0] == 1:
-        return True
+        result = True
     else:
-        return False
+        result = False
+    conn.close()
+    return result
 
-def exists_channel_superclass(name):
-    conn = sqlite3.connect(DB_FILENAME)
-    curs = conn.cursor()
-    expr_list = []
-    curs.execute('''SELECT EXISTS(SELECT 1 FROM ChannelSuperClass
-            WHERE Name=? LIMIT 1)''',
-            (name,))
-    row = curs.fetchone()
-    if row[0] == 1:
-        return True
-    else:
-        return False
-
-def exists_channel_class(name):
-    conn = sqlite3.connect(DB_FILENAME)
-    curs = conn.cursor()
-    expr_list = []
-    curs.execute('''SELECT EXISTS(SELECT 1 FROM ChannelClass
-            WHERE Name=? LIMIT 1)''',
-            (name,))
-    row = curs.fetchone()
-    if row[0] == 1:
-        return True
-    else:
-        return False
-
-def exists_channel_subclass(name):
-    conn = sqlite3.connect(DB_FILENAME)
-    curs = conn.cursor()
-    expr_list = []
-    curs.execute('''SELECT EXISTS(SELECT 1 FROM ChannelSubClass
-            WHERE Name=? LIMIT 1)''',
-            (name,))
-    row = curs.fetchone()
-    if row[0] == 1:
-        return True
-    else:
-        return False
-
-def exists_compound(chembl_id):
-    conn = sqlite3.connect(DB_FILENAME)
-    curs = conn.cursor()
-    expr_list = []
-    curs.execute('''SELECT EXISTS(SELECT 1 FROM Compound
-            WHERE ChemblId=? LIMIT 1)''',
-            (chembl_id,))
-    row = curs.fetchone()
-    if row[0] == 1:
-        return True
-    else:
-        return False
-
-def exists_interaction(uniprot_accnum, compound_id):
-    conn = sqlite3.connect(DB_FILENAME)
-    curs = conn.cursor()
-    expr_list = []
-    curs.execute('''SELECT EXISTS(SELECT 1 FROM Interaction
-            WHERE TargetUniProtAccNum=? AND CompoundId=? LIMIT 1)''',
-            (uniprot_accnum, compound_id))
-    row = curs.fetchone()
-    if row[0] == 1:
-        return True
-    else:
-        return False
-
-def find_prots_where_expr_and_inter():
-    conn = sqlite3.connect(DB_FILENAME)
-    curs = conn.cursor()
-    curs.execute('''SELECT WHERE (EXISTS(SELECT 1 FROM Interaction
-            WHERE TargetUniProtAccNum=? AND CompoundId=? LIMIT 1) AND 
-            (EXISTS(SELECT 1 FROM Expression
-            WHERE ProteinUniprotAccNum=? AND CompoundId=? LIMIT 1))''')
-
-def exists_any_interaction(uniprot_accnum):
-    conn = sqlite3.connect(DB_FILENAME)
-    curs = conn.cursor()
-    curs.execute('''SELECT EXISTS(SELECT 1 FROM Interaction
-            WHERE TargetUniProtAccNum=? LIMIT 1)''',
-            (uniprot_accnum,))
-    row = curs.fetchone()
-    if row[0] == 1:
-        return True
-    else:
-        return False
-
-def exists_expression(upac):
-    conn = sqlite3.connect(DB_FILENAME)
-    curs = conn.cursor()
-    curs.execute('''SELECT EXISTS(SELECT 1 FROM Expression
-            WHERE ProteinUniProtAccNum=? LIMIT 1)''',
-            (upac,))
-    row = curs.fetchone()
-    if row[0] == 1:
-        return True
-    else:
-        return False
-
-def dump_proteins():
-    conn = sqlite3.connect(DB_FILENAME)
-    curs = conn.cursor()
-    for row in curs.execute('''SELECT * FROM Protein'''):
-        print row
-
-def dump_tissues():
-    conn = sqlite3.connect(DB_FILENAME)
-    curs = conn.cursor()
-    for row in curs.execute('''SELECT * FROM Tissue'''):
-        print row
-
-def dump_database():
-    conn = sqlite3.connect(DB_FILENAME)
-    with codecs.open('dump.sql', 'w', 'utf-8') as f:
-        for line in conn.iterdump():
-            f.write('%s\n' % line)
-
-def lookup_protein_by_accnum(accnum):
-    conn = sqlite3.connect(DB_FILENAME)
+def lookup_protein(upac):
+    conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
     curs.execute('''SELECT UniProtAccNum, GeneSymbol, Name, ProcessFunction,
             Ions, Gating, InBETSE, IonChannelClassDesc, IonChannelSubClass,
             ChemblId FROM Protein WHERE UniProtAccNum=?''', 
-        (accnum,))
+        (upac,))
     resultset = curs.fetchone()
     if resultset == None:
         result = ''
@@ -416,165 +371,8 @@ def lookup_protein_by_accnum(accnum):
     conn.close()
     return result
 
-def is_in_betse(accnum):
-    conn = sqlite3.connect(DB_FILENAME)
-    curs = conn.cursor()
-    curs.execute('''SELECT InBETSE FROM Protein WHERE UniProtAccNum=?''', 
-        (accnum,))
-    resultset = curs.fetchone()
-    if resultset == None:
-        result = 'N'
-    else:
-        result = resultset[0]
-    conn.close()
-    return result
-
-def lookup_interaction_ids_by_uniprot(accnum):
-    conn = sqlite3.connect(DB_FILENAME)
-    curs = conn.cursor()
-    curs.execute('''SELECT Id FROM Interaction WHERE TargetUniProtAccNum=?''', 
-        (accnum,))
-    resultset = curs.fetchall()
-    conn.close()
-    return resultset
-
-def lookup_expression_ids_by_uniprot(accnum):
-    conn = sqlite3.connect(DB_FILENAME)
-    curs = conn.cursor()
-    curs.execute('''SELECT Id FROM Expression WHERE ProteinUniProtAccNum=?''', 
-        (accnum,))
-    resultset = curs.fetchall()
-    conn.close()
-    return resultset
-
-def lookup_expression(upac, tissue):
-    conn = sqlite3.connect(DB_FILENAME)
-    curs = conn.cursor()
-    curs.execute('''SELECT ExprLevel FROM Expression WHERE ProteinUniProtAccNum=? AND TissueName=?''', 
-        (upac, tissue))
-    resultset = curs.fetchall()
-    conn.close()
-    return resultset
-
-def get_all_protein_uniprot():
-    conn = sqlite3.connect(DB_FILENAME)
-    curs = conn.cursor()
-    curs.execute('''SELECT UniProtAccNum FROM Protein''')
-    resultset = curs.fetchall()
-    conn.close()
-    return resultset
-
-def get_all_tissues():
-    conn = sqlite3.connect(DB_FILENAME)
-    curs = conn.cursor()
-    curs.execute('''SELECT Name FROM Tissue''')
-    resultset = curs.fetchall()
-    conn.close()
-    return resultset
-
-def get_all_expression():
-    conn = sqlite3.connect(DB_FILENAME)
-    curs = conn.cursor()
-    curs.execute('''SELECT Id, TissueName, ProteinUniprotAccNum, ExprLevel FROM Expression''')
-    resultset = curs.fetchall()
-    conn.close()
-    return resultset
-    
-def get_interaction_by_uniprot(upac):
-    conn = sqlite3.connect(DB_FILENAME)
-    curs = conn.cursor()
-    curs.execute('''SELECT Id FROM Interaction WHERE TargetUniprotAccNum = ?''', (upac,))
-    resultset = curs.fetchall()
-    conn.close()
-    return resultset
-
-def update_protein_name(uniprot_accnum, name):
-    conn = sqlite3.connect(DB_FILENAME)
-    curs = conn.cursor()
-    curs.execute('''UPDATE Protein SET Name = ? WHERE UniProtAccNum = ?''',
-        (name, uniprot_accnum))
-    conn.commit()
-    conn.close()
-
-def update_protein_chembl_id(uniprot_accnum, chembl_id):
-    conn = sqlite3.connect(DB_FILENAME)
-    curs = conn.cursor()
-    curs.execute('''UPDATE Protein SET ChemblId = ? WHERE UniProtAccNum = ?''',
-        (chembl_id, uniprot_accnum))
-    conn.commit()
-    conn.close()
-
-def update_protein_gene_symbol(uniprot_accnum, gene_symbol):
-    conn = sqlite3.connect(DB_FILENAME)
-    curs = conn.cursor()
-    curs.execute('''UPDATE Protein SET GeneSymbol = ? WHERE UniProtAccNum = ?''',
-        (gene_symbol, uniprot_accnum))
-    conn.commit()
-    conn.close()
-
-def update_protein_process_function(uniprot_accnum, process_function):
-    conn = sqlite3.connect(DB_FILENAME)
-    curs = conn.cursor()
-    curs.execute('''UPDATE Protein SET ProcessFunction = ? WHERE UniProtAccNum = ?''',
-        (process_function, uniprot_accnum))
-    conn.commit()
-    conn.close()
-
-def update_protein_ions(uniprot_accnum, ions):
-    conn = sqlite3.connect(DB_FILENAME)
-    curs = conn.cursor()
-    curs.execute('''UPDATE Protein SET Ions = ? WHERE UniProtAccNum = ?''',
-        (ions, uniprot_accnum))
-    conn.commit()
-    conn.close()
-
-def update_protein_gating(uniprot_accnum, gating):
-    conn = sqlite3.connect(DB_FILENAME)
-    curs = conn.cursor()
-    curs.execute('''UPDATE Protein SET Gating = ? WHERE UniProtAccNum = ?''',
-        (gating, uniprot_accnum))
-    conn.commit()
-    conn.close()
-
-def update_protein_in_betse(uniprot_accnum, in_betse):
-    conn = sqlite3.connect(DB_FILENAME)
-    curs = conn.cursor()
-    curs.execute('''UPDATE Protein SET InBETSE = ? WHERE UniProtAccNum = ?''',
-        (in_betse, uniprot_accnum))
-    conn.commit()
-    conn.close()
-
-def update_protein_ion_channel_class_desc(uniprot_accnum, ion_channel_class_desc):
-    conn = sqlite3.connect(DB_FILENAME)
-    curs = conn.cursor()
-    curs.execute('''UPDATE Protein SET IonChannelClassDesc = ? WHERE UniProtAccNum = ?''',
-        (ion_channel_class_desc, uniprot_accnum))
-    conn.commit()
-    conn.close()
-
-def update_protein_ion_channel_sub_class(uniprot_accnum, ion_channel_sub_class):
-    conn = sqlite3.connect(DB_FILENAME)
-    curs = conn.cursor()
-    curs.execute('''UPDATE Protein SET IonChannelSubClass = ? WHERE UniProtAccNum = ?''',
-        (ion_channel_sub_class, uniprot_accnum))
-    conn.commit()
-    conn.close()
-
-def lookup_uniprot_accnum_by_gene_symbol(gene_symbol):
-    conn = sqlite3.connect(DB_FILENAME)
-    curs = conn.cursor()
-    curs.execute('''SELECT UniProtAccNum FROM Protein WHERE GeneSymbol=?''', 
-        (gene_symbol,))
-    resultset = curs.fetchone()
-    if resultset == None:
-        result = ''
-    else:
-        result = resultset[0]
-    conn.close()
-    return result
-
-def lookup_uniprot_accnum_by_gene_symbol_multiple(gene_symbol):
-    conn = sqlite3.connect(DB_FILENAME)
+def lookup_uniprots_by_gene_symbol(gene_symbol):
+    conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
     curs.execute('''SELECT UniProtAccNum FROM Protein WHERE GeneSymbol=?''', 
         (gene_symbol,))
@@ -586,11 +384,11 @@ def lookup_uniprot_accnum_by_gene_symbol_multiple(gene_symbol):
     conn.close()
     return resultset
 
-def lookup_gene_symbol_by_uniprot_accnum(uniprot_accnum):
-    conn = sqlite3.connect(DB_FILENAME)
+def lookup_gene_symbol_by_uniprot(upac):
+    conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
     curs.execute('''SELECT GeneSymbol FROM Protein WHERE UniProtAccNum=?''', 
-        (uniprot_accnum,))
+        (upac,))
     resultset = curs.fetchone()
     if resultset == None:
         result = ''
@@ -599,62 +397,170 @@ def lookup_gene_symbol_by_uniprot_accnum(uniprot_accnum):
     conn.close()
     return result
 
-def lookup_dbtissue(externaldb_name, db_equivalent_tissue_name):
-    conn = sqlite3.connect(DB_FILENAME)
+def is_in_betse(upac):
+    conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
-    curs.execute('''SELECT TissueName FROM DBTissue WHERE ExternalDBName=?
-        AND DBEquivalentTissueName=?''', 
-        (externaldb_name, db_equivalent_tissue_name))
+    curs.execute('''SELECT InBETSE FROM Protein WHERE UniProtAccNum=?''', 
+        (upac,))
     resultset = curs.fetchone()
     if resultset == None:
-        result = ''
+        result = False
     else:
-        result = resultset[0]
+        if resultset[0] == 'Y':
+            result = True
+        else:
+            result = False
     conn.close()
     return result
 
-def lookup_compound_by_chembl_id(chembl_id):
-    conn = sqlite3.connect(DB_FILENAME)
+def get_all_protein_uniprots():
+    conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
-    curs.execute('''SELECT Id FROM Compound WHERE ChemblId=?''', 
-        (chembl_id,))
-    resultset = curs.fetchone()
-    if resultset == None:
-        result = ''
-    else:
-        result = resultset[0]
+    curs.execute('''SELECT UniProtAccNum FROM Protein''')
+    resultset = curs.fetchall()
     conn.close()
-    return result
+    return resultset
 
-def lookup_compound_by_name(compound_name):
-    conn = sqlite3.connect(DB_FILENAME)
+def dump_proteins():
+    conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
-    curs.execute('''SELECT Id FROM Compound WHERE Name=?''', 
-        (compound_name,))
-    resultset = curs.fetchone()
-    if resultset == None:
-        result = ''
+    with codecs.open('protein_dump.sql', 'w', 'utf-8') as f:
+        for line in conn.iterdump():
+            f.write('%s\n' % line)
+    conn.close()
+
+
+# Routines for Expression table
+
+def add_expression(tissue_name, upac, expr_level, expr_units='',
+        assay_type='', dataset_name='', sourcedb_name=''):
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''INSERT INTO Expression (TissueName, ProteinUniProtAccNum,
+        ExprLevel, ExprUnits, AssayType, DatasetName, SourceDBName)
+        VALUES (?, ?, ?, ?, ?, ?, ?)''', (tissue_name, upac, expr_level,
+        expr_units, assay_type, dataset_name, sourcedb_name))
+    conn.commit()
+    conn.close()
+
+def exists_expression(upac):
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''SELECT EXISTS(SELECT 1 FROM Expression
+            WHERE ProteinUniProtAccNum=? LIMIT 1)''', (upac,))
+    row = curs.fetchone()
+    if row[0] == 1:
+        result = True
     else:
-        result = resultset[0]
+        result = False
+    conn.close()
+    return result
+
+def get_expression_ids_by_uniprot(upac):
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''SELECT Id FROM Expression WHERE ProteinUniProtAccNum=?''', 
+        (upac,))
+    resultset = curs.fetchall()
+    conn.close()
+    return resultset
+
+def get_expr_for_tissue(tissue_name):
+    prot_expr_list = []
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    for row in curs.execute('''SELECT ProteinUniProtAccNum, ExprLevel
+            FROM Expression WHERE TissueName = ?''',
+            (tissue_name,)):
+        prot_expr_list.append((row[0], row[1]))
+    conn.commit()
+    conn.close()
+    return prot_expr_list
+
+def get_expr_levels(upac, tissue):
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''SELECT ExprLevel FROM Expression
+        WHERE ProteinUniProtAccNum=? AND TissueName=?''', (upac, tissue))
+    resultset = curs.fetchall()
+    conn.close()
+    return resultset
+
+def get_all_expression():
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''SELECT Id FROM Expression''')
+    resultset = curs.fetchall()
+    conn.close()
+    return resultset
+
+
+# Routines for DBGene table
+
+def add_dbgene(externaldb_name, gbac, probe_id):
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''INSERT INTO DBGene (ExternalDBName, GenbankAccNum, ProbeID)
+        VALUES (?, ?, ?)''', (externaldb_name, gbac, probe_id))
+    conn.commit()
+    conn.close()
+
+
+# Routines for GenbankUniprot table
+
+def add_genbank_uniprot(gbac, upac):
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''INSERT INTO GenbankUniprot (GenbankAccNum, UniProtAccNum)
+        VALUES (?, ?)''', (gbac, upac))
+    conn.commit()
+    conn.close()    
+
+def exists_genbank_uniprot(gbac, upac):
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''SELECT EXISTS(SELECT 1 FROM GenbankUniprot
+            WHERE (GenbankAccNum=? AND UniProtAccNum=?) LIMIT 1)''',
+            (gbac, upac))
+    row = curs.fetchone()
+    if row[0] == 1:
+        result = True
+    else:
+        result = False
     conn.close()
     return result
 
 
-    curs.execute('''CREATE TABLE Compound(
-        Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-        SMILES TEXT NOT NULL,
-        InChI TEXT NOT NULL,
-        Name TEXT NOT NULL,
-        ChemblId TEXT NOT NULL,
-        Synonyms TEXT NOT NULL,
-        ApprovalStatus TEXT NOT NULL,
-        FirstApprovalYear TEXT NOT NULL,
-        SourceDBName NOT NULL
-        );''')
+# Routines for Compound table
 
+def add_compound(name, smiles='', inchi='', chembl_id='', synonyms='',
+        approval_status='', first_approval_year='', sourcedb_name=''):
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''INSERT INTO Compound (SMILES, InChI, Name, ChemblId,
+        Synonyms, ApprovalStatus, FirstApprovalYear, SourceDBName)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+        (smiles, inchi, name, chembl_id, synonyms, approval_status,
+        first_approval_year, sourcedb_name))
+    conn.commit()
+    conn.close()    
 
-def lookup_compound_by_id(id):
-    conn = sqlite3.connect(DB_FILENAME)
+def exists_compound_by_chembl_id(chembl_id):
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    expr_list = []
+    curs.execute('''SELECT EXISTS(SELECT 1 FROM Compound
+            WHERE ChemblId=? LIMIT 1)''', (chembl_id,))
+    row = curs.fetchone()
+    if row[0] == 1:
+        result = True
+    else:
+        result = False
+    conn.close()
+    return result
+
+def lookup_compound(id):
+    conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
     curs.execute('''SELECT Id, SMILES, InChI, Name, ChemblId, Synonyms,
             ApprovalStatus, FirstApprovalYear, SourceDBName
@@ -668,112 +574,243 @@ def lookup_compound_by_id(id):
     conn.close()
     return result
 
-def lookup_interaction_by_uniprot(upac):
-    conn = sqlite3.connect(DB_FILENAME)
+def get_compound_id_by_chembl_id(chembl_id):
+    conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
-    curs.execute('''SELECT Id FROM Interaction WHERE TargetUniprotAccNum=?''', 
-        (upac,))
-    resultset = curs.fetchall()
-    result = resultset
+    curs.execute('''SELECT Id FROM Compound WHERE ChemblId=?''', 
+        (chembl_id,))
+    resultset = curs.fetchone()
+    if resultset == None:
+        result = ''
+    else:
+        result = resultset[0]
     conn.close()
     return result
 
-def setup_externaldb():
-    add_externaldb('biogps', 'http://biogps.org')
-    add_externaldb('chembl', 'https://www.ebi.ac.uk/chembl/')
-    add_externaldb('brenda', 'http://www.brenda-enzymes.org')
-    add_externaldb('drugbank', 'https://www.drugbank.ca')
-    add_externaldb('zinc15', 'http://zinc15.docking.org')
-    add_externaldb('hmdb', 'http://www.hmdb.ca')
-    add_externaldb('channelpedia', 'http://channelpedia.epfl.ch')
+def get_compound_id_by_compound_name(compound_name):
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''SELECT Id FROM Compound WHERE Name=?''', 
+        (compound_name,))
+    resultset = curs.fetchone()
+    if resultset == None:
+        result = ''
+    else:
+        result = resultset[0]
+    conn.close()
+    return result
+
+
+# Routines for Interaction table
+
+def add_interaction(target_upac, compound_id, action_type='',
+        action_desc='', strength=0, strength_units='', assay_type='',
+        chembl_id='', sourcedb_name=''):
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''INSERT INTO Interaction (TargetUniProtAccNum, CompoundId,
+        ActionType, ActionDesc, Strength, StrengthUnits, AssayType, 
+        ChemblId, SourceDBName)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+        (target_upac, compound_id, action_type, action_desc, 
+        strength, strength_units, assay_type, chembl_id, sourcedb_name))
+    conn.commit()
+    conn.close()
+
+def exists_interaction(upac, compound_id):
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''SELECT EXISTS(SELECT 1 FROM Interaction
+            WHERE TargetUniProtAccNum=? AND CompoundId=? LIMIT 1)''',
+            (upac, compound_id))
+    row = curs.fetchone()
+    if row[0] == 1:
+        result = True
+    else:
+        result = False
+    conn.close()
+    return result
+
+def exists_any_interaction_for_protein(upac):
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''SELECT EXISTS(SELECT 1 FROM Interaction
+            WHERE TargetUniProtAccNum=? LIMIT 1)''',
+            (upac,))
+    row = curs.fetchone()
+    if row[0] == 1:
+        result = True
+    else:
+        result = False
+    conn.close()
+    return result
+
+def get_interaction_ids_by_uniprot(upac):
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''SELECT Id FROM Interaction WHERE TargetUniProtAccNum=?''', 
+        (upac,))
+    resultset = curs.fetchall()
+    conn.close()
+    return resultset
+
+
+# Routines for DBTissue table
+
+def add_dbtissue(externaldb_name, tissue_name, db_equivalent_tissue_name):
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''INSERT INTO DBTissue (ExternalDBName, TissueName,
+        DBEquivalentTissueName)
+        VALUES (?, ?, ?)''', (externaldb_name, tissue_name, 
+        db_equivalent_tissue_name))
+    conn.commit()
+    conn.close()
+    
+def get_bto_tissue_in_dbtissue(externaldb_name, db_equivalent_tissue_name):
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''SELECT TissueName FROM DBTissue WHERE ExternalDBName=?
+        AND DBEquivalentTissueName=?''', 
+        (externaldb_name, db_equivalent_tissue_name))
+    resultset = curs.fetchone()
+    if resultset == None:
+        result = ''
+    else:
+        result = resultset[0]
+    conn.close()
+    return result
+
+
+# Routines for multiple tables
+
+def dump_database():
+    conn = sqlite3.connect(PATH_DB)
+    with codecs.open('levindb_dump.sql', 'w', 'utf-8') as f:
+        for line in conn.iterdump():
+            f.write('%s\n' % line)
+    conn.close()
+
+def print_db_stats():
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute("SELECT * FROM sqlite_master WHERE type='table'")
+    table_name_list = []
+    for table_info in curs:
+        table_name = table_info[1]
+        table_name_list.append(table_name)
+    conn.close()
+    for table_name in table_name_list:
+        conn = sqlite3.connect(PATH_DB)
+        curs = conn.cursor()
+        curs.execute('SELECT COUNT(*) FROM %s' % (table_name,))
+        row_count = curs.fetchone()[0]
+        print table_name, row_count
+        conn.close()
+    useful_data_count = 0
+    upac_record_list = get_all_protein_uniprots()
+    for upac_record in upac_record_list:
+        upac = upac_record[0]
+        interaction_id_list = get_interaction_ids_by_uniprot(upac)
+        expression_id_list = get_expression_ids_by_uniprot(upac)
+        if len(interaction_id_list) > 0 and len(expression_id_list) > 0:
+            useful_data_count += 1
+    print 'Protein with interaction and expression %d' % useful_data_count
+
+
+# DB management functions
 
 def cleanup_externaldb():
-    conn = sqlite3.connect(DB_FILENAME)
+    conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
     curs.execute('''DELETE FROM ExternalDB''')
     conn.commit()
     conn.close()
 
-def setup_ontology():
-    tissue_dict = {}
-    tissue_file = open(TISSUE_FILENAME)
-    for line in tissue_file:
-        tissue_dict[line.strip()] = 1
-    tissue_file.close()
-    parser = go_obo_parser.parseGOOBO(OBO_FILENAME)
-    for record in parser:
-        name = record['name']
-        if name in tissue_dict:
-            bto_id = record['id']
-            add_tissue(name, bto_id=bto_id)
+def setup_externaldb():
+    add_externaldb(EXTDB_BIOGPS, 'http://biogps.org')
+    add_externaldb(EXTDB_CHEMBL, 'https://www.ebi.ac.uk/chembl/')
+    add_externaldb(EXTDB_BRENDA, 'http://www.brenda-enzymes.org')
+    add_externaldb(EXTDB_DRUGBANK, 'https://www.drugbank.ca')
+    add_externaldb(EXTDB_ZINC15, 'http://zinc15.docking.org')
+    add_externaldb(EXTDB_HMDB, 'http://www.hmdb.ca')
+    add_externaldb(EXTDB_CHANNELPEDIA, 'http://channelpedia.epfl.ch')
 
 def cleanup_ontology():
-    conn = sqlite3.connect(DB_FILENAME)
+    conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
     curs.execute('''DELETE FROM Tissue''')
     conn.commit()
     conn.close()
 
-def setup_biogps():
-    translation_f = open(BIOGPS_TRANSLATION_TABLE, 'rU')
-    translation_r = csv.reader(translation_f)
-    translation_r.next()
-    for row in translation_r:
-        biogps_tissue = row[0]
-        bto_tissue = row[1]
-        add_dbtissue('biogps', bto_tissue, biogps_tissue)
-    translation_f.close()
+def setup_ontology():
+    tissue_dict = {}
+    tissue_file = open(PATH_BTO_TISSUES)
+    for line in tissue_file:
+        tissue_dict[line.strip()] = 1
+    tissue_file.close()
+    parser = go_obo_parser.parseGOOBO(PATH_BTO_BRENDA_TISSUE_OBO)
+    for record in parser:
+        tissue_name = record['name']
+        if tissue_name in tissue_dict:
+            bto_id = record['id']
+            add_tissue(tissue_name, bto_id, '')
 
-def cleanup_dbtissue():
-    conn = sqlite3.connect(DB_FILENAME)
+def cleanup_genbank_uniprot():
+    conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
-    curs.execute('''DELETE FROM DBTissue''')
+    curs.execute('''DELETE FROM GenbankUniprot''')
     conn.commit()
     conn.close()
 
-def remove_nonascii(s):
-    return s.encode('ascii', errors='ignore')
+def setup_genbank_uniprot():
+    gu_file = open(PATH_UNIPROT_GENBANK, 'rU')
+    line_num = 0
+    for line in gu_file:
+        if line_num != 0:
+            line_split = line.split('\t')
+            if len(line_split) == 2:
+                gbac = line_split[0].strip()
+                upac = line_split[1].strip()
+                if upac != '':
+                    if not exists_genbank_uniprot(gbac, upac):
+                        add_genbank_uniprot(gbac, upac)
+        line_num += 1
+    gu_file.close()
+
+def cleanup_proteins():
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''DELETE FROM Protein''')
+    conn.commit()
+    conn.close()
 
 def setup_ion_channels():
-    prot_file = open(PROTEIN_FILENAME, 'rU')
-    #prot_reader = unicodecsv.reader(prot_file, encoding='utf-8')
+    prot_file = open(PATH_GO_ION_CHANNELS, 'rU')
     prot_reader = csv.reader(prot_file)
     prot_reader.next()
     for row in prot_reader:
-        name = row[2]
-        #process_function = remove_nonascii(row[3])
+        protein_name = row[2]
         process_function = ''
-        #if process_function.startswith('NOT AN ION CHANNEL'):
-        #    continue
-        uniprot_accnum = row[0]
-        if uniprot_accnum == '':
+        upac = row[0]
+        if upac == '':
             continue
-        #if not uniprot_accnum[0] in ['O', 'P', 'Q']:
-        #    continue
         gene_symbol = row[1]
         if gene_symbol == '-':
             gene_symbol = ''
-        #if gene_symbol == '':
-        #    continue
         ions = row[4]
         gating = row[5]
         ion_channel_subclass = row[6]
         in_betse = row[7]
-        #check_uniprot_accnum = lookup_uniprot_accnum_by_gene_symbol(gene_symbol)
-        #if check_uniprot_accnum != '':
-        #    print 'Dup:', gene_symbol, check_uniprot_accnum
-        #check_gene_symbol = lookup_gene_symbol_by_uniprot_accnum(uniprot_accnum)
-        #if check_gene_symbol != '':
-        #    print 'Dup:', uniprot_accnum, check_gene_symbol
-        
-        if not exists_protein(uniprot_accnum):
-            add_protein(uniprot_accnum, gene_symbol, name, process_function, ions,
-                    gating, in_betse, ion_channel_subclass)
-            pass
-        
+        if not in_betse == 'Y':
+            in_betse = 'N'
+        if not exists_protein(upac):
+            add_protein(upac, gene_symbol, protein_name,
+                    process_function, ions, gating, in_betse,
+                    ion_channel_subclass)
         else:
-            old_protein_record = lookup_protein_by_accnum(uniprot_accnum)
-            old_uniprot_accnum = old_protein_record[0]
+            old_protein_record = lookup_protein(upac)
+            old_upac = old_protein_record[0]
             old_gene_symbol = old_protein_record[1]
             old_name = old_protein_record[2]
             old_process_function = old_protein_record[3]
@@ -783,264 +820,154 @@ def setup_ion_channels():
             old_ion_channel_class_desc = old_protein_record[7]
             old_ion_channel_subclass = old_protein_record[8]
             old_chembl_id = old_protein_record[9]
-            
-            update_protein_gene_symbol(uniprot_accnum, gene_symbol)
-            update_protein_name(uniprot_accnum, name)
-            #update_protein_process_function(uniprot_accnum, process_function)
-            update_protein_ions(uniprot_accnum, ions)
-            update_protein_gating(uniprot_accnum, gating)
+            update_protein_gene_symbol(upac, gene_symbol)
+            update_protein_name(upac, protein_name)
+            update_protein_ions(upac, ions)
+            update_protein_gating(upac, gating)
             if old_in_betse == '':
                 if in_betse == 'yes':
                     in_betse = 'Y'
                 elif in_betse == 'soon':
-                    in_betse = '?'
+                    in_betse = 'N'
                 elif in_betse == 'doable':
-                    in_betse = '?'
+                    in_betse = 'N'
                 else:
                     in_betse = 'N'
-                update_protein_in_betse(uniprot_accnum, in_betse)
-            update_protein_ion_channel_sub_class(uniprot_accnum, ion_channel_subclass)
-        
-        #print 'Added %s' % uniprot_accnum
+                update_protein_in_betse(upac, in_betse)
+            update_protein_ion_channel_sub_class(upac, ion_channel_subclass)
     prot_file.close()
 
+def cleanup_channel_classes():
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''DELETE FROM ChannelSuperClass''')
+    conn.commit()
+    conn.close()
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''DELETE FROM ChannelClass''')
+    conn.commit()
+    conn.close()
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''DELETE FROM ChannelSubClass''')
+    conn.commit()
+    conn.close()
+
 def setup_channel_classes():
-    classfile = open(CHANNEL_CLASSES_FILENAME, 'rU')
-    classreader = csv.reader(classfile)
-    classreader.next()
-    for row in classreader:
+    class_file = open(PATH_CHANNEL_CLASSES, 'rU')
+    class_reader = csv.reader(class_file)
+    class_reader.next()
+    for row in class_reader:
         channel_superclass = row[0]
         channel_class = row[1]
         channel_subclass = row[2]
         subfamily = row[3]
-        gene = row[4]
-        if not exists_channel_superclass(channel_superclass):
-            add_channel_superclass(channel_superclass)
+        gene_symbol = row[4]
+        if not exists_channel_super_class(channel_superclass):
+            add_channel_super_class(channel_superclass)
         if not exists_channel_class(channel_class):
             add_channel_class(channel_class, channel_superclass)
-        if not exists_channel_subclass(channel_subclass):
-            add_channel_subclass(channel_subclass, channel_class)
-        update_protein_subclass(gene, channel_subclass)
-    classfile.close()
+        if not exists_channel_sub_class(channel_subclass):
+            add_channel_sub_class(channel_subclass, channel_class)
+        upac_record_list = lookup_uniprots_by_gene_symbol(gene_symbol)
+        for upac_record in upac_record_list:
+            upac = upac_record[0]
+            update_protein_sub_class(upac, channel_subclass)
+    class_file.close()
 
-def setup_all_proteins():
-    mapping_dict = {}
-    uniprot_symbol_file = open(HUMAN_IDMAPPING)
-    for line in uniprot_symbol_file:
-        uniprot_accum = line.strip().split()[0]
-        gene_symbol = line.strip().split()[2]
-        mapping_dict[gene_symbol] = uniprot_accum
-    uniprot_symbol_file.close()
-    prot_file = open(BIOGPS_GNF1H_ANNOT, 'rU')
-    prot_reader = csv.reader(prot_file, delimiter='\t')
-    prot_reader.next()
-    for row in prot_reader:
-        gene_symbol = row[6]
-        if not gene_symbol in mapping_dict:
-            'Could not find uniprot accession for %s' % gene_symbol
-            continue
-        uniprot_accum = mapping_dict[gene_symbol]
-        if exists_protein(uniprot_accum):
-            continue
-        add_protein(uniprot_accum, gene_symbol, '', '')
-        #print 'Added %s %s' % (uniprot_accum, gene_symbol)
-    prot_file.close()
-
-def cleanup_proteins():
-    conn = sqlite3.connect(DB_FILENAME)
+def cleanup_dbtissue():
+    conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
-    curs.execute('''DELETE FROM Protein''')
+    curs.execute('''DELETE FROM DBTissue''')
     conn.commit()
     conn.close()
 
-def setup_genbankuniprot():
-    gu_file = open(GENBANKUNIPROT_FILENAME, 'rU')
-    line_num = 0
-    for line in gu_file:
-        if line_num != 0:
-            line_split = line.split('\t')
-            if len(line_split) == 2:
-                genbank_accnum = line_split[0].strip()
-                uniprot_accnum = line_split[1].strip()
-                if uniprot_accnum != '':
-                    if not exists_genbankuniprot(genbank_accnum, 
-                            uniprot_accnum):
-                        try:
-                            add_genbankuniprot(genbank_accnum, uniprot_accnum)
-                        except Exception as e:
-                            print e
-                            print genbank_accnum, uniprot_accnum
-        line_num += 1
-    gu_file.close()
+def setup_dbtissue():
+    setup_biogps()
+    setup_hpa()
 
-def cleanup_genbankuniprot():
-    conn = sqlite3.connect(DB_FILENAME)
+def setup_biogps():
+    translation_file = open(PATH_BIOGPS_TRANSLATION_TABLE, 'rU')
+    translation_reader = csv.reader(translation_file)
+    translation_reader.next()
+    for row in translation_reader:
+        biogps_tissue = row[0]
+        bto_tissue = row[1]
+        add_dbtissue(EXTDB_BIOGPS, bto_tissue, biogps_tissue)
+    translation_file.close()
+
+def setup_hpa():
+    translation_file = open(PATH_HPA_TRANSLATION_TABLE, 'rU')
+    translation_reader = csv.reader(translation_file)
+    translation_reader.next()
+    for row in translation_reader:
+        hpa_tissue = row[0]
+        bto_tissue = row[1]
+        add_dbtissue(EXTDB_HPA, bto_tissue, hpa_tissue)
+    translation_file.close()
+
+def cleanup_expression():
+    conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
-    curs.execute('''DELETE FROM GenbankUniprot''')
+    curs.execute('''DELETE FROM Expression''')
     conn.commit()
     conn.close()
 
-def setup_chembl():
-    chembl_compound_file = open(CHEMBL_COMPOUND_FILENAME)
-    chembl_compound_file.next()
-    for line in chembl_compound_file:
-        line = ''.join([i if ord(i) < 128 else '' for i in line])
-        uniprot = line[0:14].strip()
-        #target_name = line[14:96].strip()
-        #target_id = line[96:114].strip()
-        chembl_compound_id = line[114:132].strip()
-        compound_name_in_doc = line[132:334].strip()
-        first_approval = line[334:342].strip()
-        withdrawn_flag = line[342:346].strip()
-        inchi = line[346:].strip()
-        # This is a temporary way of checking if the compound exists
-        if exists_protein(uniprot) and not exists_compound(chembl_compound_id):
-            if withdrawn_flag == 1:
-                approval_status = 'WITHDRAWN'
-            else:
-                approval_status = 'UNKNOWN'
-            add_compound('', '', compound_name_in_doc, chembl_compound_id, '',
-                    approval_status, first_approval, 'chembl')
-            #print 'Added compound %s' % chembl_compound_id
-        if exists_protein(uniprot) and exists_compound(chembl_compound_id):
-            compound_id = lookup_compound_by_name(chembl_compound_id)
-            print compound_id
-            if not exists_interaction(uniprot, compound_id):
-                add_interaction(uniprot, compound_id, sourcedb_name='chembl')
-                #print 'Added interaction %s %s' % (uniprot, chembl_compound_id)
-    chembl_compound_file.close()
-
-def setup_hmdb():
-    pass
-
-def setup_drugbank():
-    pass
-
-def setup_target_compound():
-    tcf = open(TARGET_COMPOUND_FILENAME)
-    tcr = csv.reader(tcf)
-    tcr.next()
-    for row in tcr:
-        uniprot = row[1]
-        effect_type = row[7]
-        compound_name = row[9]
-        if compound_name == '':
-            continue
-        chembl_id = row[10]
-        param = row[11]
-        value = float(row[12])
-        if exists_protein(uniprot):
-            if not exists_compound(chembl_id):
-                add_compound('', '', compound_name, chembl_id, 
-                        '', '', '', 'chembl')
-            compound_id = lookup_compound_by_chembl_id(chembl_id)
-            add_interaction(uniprot, compound_id, action_type=effect_type,
-                    strength=value, strength_units=param, sourcedb_name='chembl')
-    tcf.close()
-
-def cleanup_compounds():
-    conn = sqlite3.connect(DB_FILENAME)
-    curs = conn.cursor()
-    curs.execute('''DELETE FROM Compound''')
-    conn.commit()
-    conn.close()
-
-def cleanup_interactions():
-    conn = sqlite3.connect(DB_FILENAME)
-    curs = conn.cursor()
-    curs.execute('''DELETE FROM Interaction''')
-    conn.commit()
-    conn.close()
-
-def get_expression(tissue_name, uniprot_accnum):
-    conn = sqlite3.connect(DB_FILENAME)
-    curs = conn.cursor()
-    expr_list = []
-    for row in curs.execute('''SELECT ExprLevel FROM Expression 
-            WHERE TissueName = ? AND ProteinUniProtAccNum = ?''',
-            (tissue_name, uniprot_accnum)):
-        print row
-        expr_list.append(row[0])
-
-def get_expression_values(tissue_list, protein_list):
-    conn = sqlite3.connect(DB_FILENAME)
-    curs = conn.cursor() 
-    full_list = []
-    for row in curs.execute('''SELECT * FROM Expression 
-            WHERE TissueName = ? AND ProteinUniProtAccNum = ?''',
-            (tissue_list, protein_list)):
-        print row
-        full_list.append(row[0])
-
-def process_biogps_annotation():
-    chip_annot_f = open(BIOGPS_GNF1H_ANNOT, 'rU')
-    chip_annot_r = csv.reader(chip_annot_f, delimiter='\t')
-    chip_annot_r.next()
+def read_biogps_annot():
     annot_dict = {}
-    for row in chip_annot_r:
+    chip_annot_file = open(PATH_BIOGPS_GNF1H_ANNOT, 'rU')
+    chip_annot_reader = csv.reader(chip_annot_file, delimiter='\t')
+    chip_annot_reader.next()
+    for row in chip_annot_reader:
         probeset_id = row[0]
-        symbol = row[6]
-        #if probeset_id.startswith('gnf1h'):
-        #    probeset_id = probeset_id[5:].lstrip('0')
-        if symbol != '':
-            annot_dict[probeset_id] = symbol
-    chip_annot_f.close()
+        gene_symbol = row[6]
+        if gene_symbol != '':
+            annot_dict[probeset_id] = gene_symbol
+    chip_annot_file.close()
     return annot_dict
 
-def process_biogps_microarray(annot_dict):
-    microarray_f = open(BIOGPS_GCRMA, 'rU')
-    microarray_r = csv.reader(microarray_f)
-    header = microarray_r.next()
+def process_biogps_data():
+    annot_dict = read_biogps_annot()
+    microarray_file = open(PATH_BIOGPS_GCRMA, 'rU')
+    microarray_reader = csv.reader(microarray_file)
+    header = microarray_reader.next()
     tissue_list = header[1:]
-    for row in microarray_r:
+    for row in microarray_reader:
         probeset_id = row[0]
         if not probeset_id in annot_dict:
             continue
-        symbol = annot_dict[probeset_id]
-        uniprot_accnum_list = lookup_uniprot_accnum_by_gene_symbol_multiple(symbol.strip())
-        if len(uniprot_accnum_list) == 0:
+        gene_symbol = annot_dict[probeset_id]
+        upac_resultset = lookup_uniprots_by_gene_symbol(gene_symbol.strip())
+        if len(upac_resultset) == 0:
             continue
         for i in xrange(0, len(tissue_list)):
             expr_level = float(row[i + 1])
-            tissue_name = lookup_dbtissue('biogps', tissue_list[i])
-            for uniprot_accnum in uniprot_accnum_list:
-                #if uniprot_accnum in ['Q12809', 'Q6U279', 'Q6U283', 'Q6U287', 'Q86U57']:
-                #    print uniprot_accnum, expr_level
-                uniprot_accnum = uniprot_accnum[0]
-                add_expression(tissue_name, uniprot_accnum, expr_level, 
-                        assay_type='microarray', dataset_name=BIOGPS_DATASET, 
-                        sourcedb_name='biogps')
-                #print 'Added %s %s' % (uniprot_accnum, tissue_name)
-    microarray_f.close()
+            tissue_name = get_bto_tissue_in_dbtissue(EXTDB_BIOGPS, tissue_list[i])
+            for upac_result in upac_resultset:
+                upac = upac_result[0]
+                add_expression(tissue_name, upac, expr_level, 
+                        assay_type=ASSAY_MICROARRAY,
+                        dataset_name=DATASET_BIOGPS, 
+                        sourcedb_name=EXTDB_BIOGPS)
+    microarray_file.close()
 
-def process_biogps_data():
-    annot_dict = process_biogps_annotation()
-    process_biogps_microarray(annot_dict)
-
-
-def process_protein_atlas_data():
+def read_hpa_map():
     ensembl_to_uniprot = {}
-    fmap = open(UNIPROT_ENSEMBL_MAPPING)
-    for line in fmap:
+    map_file = open(PATH_UNIPROT_ENSEMBL_IDMAPPING)
+    for line in map_file:
         row = line.strip().split('\t')
         upac = row[0]
         ensg = row[2]
         ensembl_to_uniprot[ensg] = upac
-    fmap.close()
-    
-    tissue_to_bto = {}
-    ftissue = open(HPA_TISSUE_TRANSLATION_TABLE)
-    rtissue = csv.reader(ftissue)
-    rtissue.next()
-    for row in rtissue:
-        hpa_tissue = row[0]
-        bto_tissue = row[1]
-        tissue_to_bto[hpa_tissue] = bto_tissue
-    ftissue.close()
-    
-    fhpa = open(HPA_RNA_TISSUE)
-    fhpa.next()
-    for line in fhpa:
+    map_file.close()
+    return ensembl_to_uniprot
+
+def process_hpa_data():
+    ensembl_to_uniprot = read_hpa_map()
+    hpa_file = open(PATH_HPA_RNA_TISSUE)
+    hpa_file.next()
+    for line in hpa_file:
         row = line.strip().split('\t')
         if len(row) < 5 or row[0].strip() == '':
             continue
@@ -1049,66 +976,105 @@ def process_protein_atlas_data():
             continue
         upac = ensembl_to_uniprot[ensg]
         gene_name = row[1]
-        tissue = row[2]
-        tissue_bto = tissue_to_bto[tissue]
-        value = float(row[3])
+        tissue_name = row[2]
+        tissue_bto = get_bto_tissue_in_dbtissue(EXTDB_HPA, tissue_name)
+        expr_value = float(row[3])
         if exists_protein(upac):
-            add_expression(tissue_bto, upac, value, assay_type='RNA-seq',
-                    dataset_name=HPA_DATASET, sourcedb_name=EXTDB_HPA)
-    fhpa.close()
+            add_expression(tissue_bto, upac, expr_value,
+                    assay_type=ASSAY_RNASEQ, dataset_name=DATASET_HPA,
+                    sourcedb_name=EXTDB_HPA)
+    hpa_file.close()
 
-def cleanup_expression():
-    conn = sqlite3.connect(DB_FILENAME)
+def cleanup_compounds():
+    conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
-    curs.execute('''DELETE FROM Expression''')
+    curs.execute('''DELETE FROM Compound''')
     conn.commit()
     conn.close()
 
-def get_expression_for_tissue(tissue_name):
-    prot_expr_list = []
-    conn = sqlite3.connect(DB_FILENAME)
+def cleanup_interactions():
+    conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
-    for row in curs.execute('''SELECT ProteinUniProtAccNum, ExprLevel
-            FROM Expression WHERE TissueName = ?''',
-            (tissue_name,)):
-        prot_expr_list.append((row[0], row[1]))
+    curs.execute('''DELETE FROM Interaction''')
     conn.commit()
     conn.close()
-    return prot_expr_list
 
-def normalize_prot_expr_list(prot_expr_list):
-    normalized_list = []
-    total_expr = 0.0
-    for elem in prot_expr_list:
-        upac = elem[0]
-        expr = elem[1]
-        total_expr += expr
-    for elem in prot_expr_list:
-        upac = elem[0]
-        expr = elem[1]
-        norm_expr = expr / total_expr
-        normalized_list.append((upac, norm_expr))
-    return normalized_list
+def input_chembl_assays():
+    input_chembl_compounds()
+    input_chembl_drugs()
 
-def get_uniprot_seq(upac):
-    ls = os.listdir('data/seq')
-    fn = '%s.fasta' % upac
-    if fn == 'Q96LR1.fasta':
-        return ''
-    if not fn in ls:
-        cmd = 'wget -O data/seq/%s http://www.uniprot.org/uniprot/%s' % (fn, fn)
-        #print cmd
-        os.system(cmd)
-    f = open('data/seq/%s' % fn)
-    f.next()
-    seqlist = []
-    for line in f:
-        seqlist.append(line.strip())
-    f.close()
-    seq = ''.join(seqlist)
-    return seq
+def input_chembl_compounds():
+    compound_file = open(PATH_CHEMBL_ASSAYS_COMPOUND)
+    for line in compound_file:
+        line_split = line.split('\t')
+        upac = line_split[0].strip()
+        target_chembl_id = line_split[1].strip()
+        target_type = line_split[2].strip()
+        target_name = line_split[3].strip()
+        compound_chembl_id = line_split[4].strip()
+        compound_name = line_split[5].strip()
+        iupac_name = line_split[6].strip()
+        assay_chembl_id = line_split[7].strip()
+        assay_standard_type = line_split[8].strip()
+        assay_standard_relation = line_split[9].strip()
+        assay_value = line_split[10].strip()
+        assay_units = line_split[11].strip()
+        assay_type = line_split[12].strip()
+        assay_description = line_split[13].strip()
+        if not exists_compound_by_chembl_id(compound_chembl_id):
+            add_compound(compound_name, '', '', chembl_id=compound_chembl_id,
+                    synonyms=iupac_name, sourcedb_name=EXTDB_CHEMBL)
+        if not exists_protein(upac):
+            add_protein(upac, name=target_name, process_function=target_type,
+            chembl_id=target_chembl_id)
+        compound_id = get_compound_id_by_chembl_id(compound_chembl_id)
+        add_interaction(upac, compound_id, action_type='',
+                strength=assay_value.decode('utf_8').encode('utf_8'),
+                strength_units=assay_units.decode('utf_8').encode('utf_8'),
+                assay_type=assay_standard_type.decode('utf_8').encode('utf_8'),
+                chembl_id=assay_chembl_id, sourcedb_name=EXTDB_CHEMBL)
+    compound_file.close()
 
-def get_expression_prob_for_all_tissues():
+def input_chembl_drugs():
+    drug_file = open(PATH_CHEMBL_ASSAYS_DRUG)
+    for line in drug_file:
+        line_split = line.split('\t')
+        upac = line_split[0].strip()
+        target_chembl_id = line_split[1].strip()
+        target_type = line_split[2].strip()
+        target_name = line_split[3].strip()
+        drug_mechanism = line_split[4].strip()
+        dosed_compound_chembl_id = line_split[5].strip()
+        dosed_compound_name = line_split[6].strip()
+        active_compound_chembl_id = line_split[7].strip()
+        active_compound_name = line_split[8].strip()
+        assay_chembl_id = line_split[9].strip()
+        assay_standard_type = line_split[10].strip()
+        assay_standard_relation = line_split[11].strip()
+        assay_value = line_split[12].strip()
+        assay_units = line_split[13].strip()
+        assay_type = line_split[14].strip()
+        assay_description = line_split[15].strip()
+        if not exists_compound_by_chembl_id(active_compound_chembl_id):
+            add_compound('', '', active_compound_name,
+                    chembl_id=active_compound_chembl_id,
+                    synonyms=dosed_compound_name, sourcedb_name=EXTDB_CHEMBL)
+        if not exists_protein(upac):
+            add_protein(upac, name=target_name, process_function=target_type,
+                    chembl_id=target_chembl_id)
+        compound_id = get_compound_id_by_chembl_id(active_compound_chembl_id)
+        add_interaction(upac, compound_id,
+                action_type=drug_mechanism.decode('utf_8').encode('utf_8'),
+                strength=assay_value.decode('utf_8').encode('utf_8'),
+                strength_units=assay_units.decode('utf_8').encode('utf_8'),
+                assay_type=assay_standard_type.decode('utf_8').encode('utf_8'),
+                chembl_id=assay_chembl_id, sourcedb_name=EXTDB_CHEMBL)
+    drug_file.close()
+
+
+# Deprecated or not implemented
+
+def get_expression_prob():
     aa_list = ['A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'P',
             'Q', 'R', 'S', 'T', 'V', 'W', 'Y']
     out_file = open('aa_out.csv', 'w')
@@ -1117,7 +1083,7 @@ def get_expression_prob_for_all_tissues():
         out_file.write(',%s' % aa)
     out_file.write('\n')
     tissue_list = []
-    conn = sqlite3.connect(DB_FILENAME)
+    conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
     for row in curs.execute('''SELECT Name FROM Tissue'''):
         tissue_list.append(row[0])
@@ -1126,9 +1092,7 @@ def get_expression_prob_for_all_tissues():
     data_dict = {}
     count = 0
     for tissue in tissue_list:
-        #if count == 1:
-        #    break
-        prot_expr_list = get_expression_for_tissue(tissue)
+        prot_expr_list = get_expr_for_tissue(tissue)
         if len(prot_expr_list) > 0:
             print 'Normalizing %s' % tissue
             data_dict[tissue] = normalize_prot_expr_list(prot_expr_list)
@@ -1162,44 +1126,56 @@ def get_expression_prob_for_all_tissues():
         out_file.write('\n')
     out_file.close()
 
-def write_db_stats():
-
-    conn = sqlite3.connect(DB_FILENAME)
-    curs = conn.cursor()
-    curs.execute("SELECT * FROM sqlite_master WHERE type='table'")
-    table_name_list = []
-    for table_info in curs:
-        table_name = table_info[1]
-        table_name_list.append(table_name)
-    conn.close()
-    
-    for table_name in table_name_list:
-        conn = sqlite3.connect(DB_FILENAME)
-        curs = conn.cursor()
-        curs.execute('SELECT COUNT(*) FROM %s' % (table_name,))
-        row_count = curs.fetchone()[0]
-        print table_name, row_count
-        conn.close()
-        
-    useful_data_points = 0
-    uniprot_list = get_all_protein_uniprot()
-    for uniprot in uniprot_list:
-        uniprot = uniprot[0]
-        interaction_id_list = lookup_interaction_ids_by_uniprot(uniprot)
-        expression_id_list = lookup_expression_ids_by_uniprot(uniprot)
-        if len(interaction_id_list) > 0 and len(expression_id_list) > 0:
-            useful_data_points += 1
-    print 'Protein with interaction and expression %d' % useful_data_points
-
-    #uniprot_list = get_all_protein_uniprot()
-    #for uniprot in uniprot_list:
-    #    uniprot = uniprot[0]
-    #    gene_symbol = lookup_gene_symbol_by_uniprot_accnum(uniprot)
-    #    print uniprot, gene_symbol
-
+def input_chembl_uniprot():
+    compound_file = open(PATH_TC_CHEMBL_COMPOUND)
+    for line in compound_file:
+        accession = line[0:14].strip()
+        pref_name = line[14:96].strip()
+        target_chembl_id = line[96:114].strip()
+        if exists_protein(accession):
+            protein_record = lookup_protein(accession)
+            if protein_record[2] == '':
+                update_protein_name(accession, pref_name)
+            if protein_record[9] == '':
+                update_protein_chembl_id(accession, target_chembl_id)
+        else:
+            add_protein(accession, name=pref_name)
+        compound_chembl_id = line[114:132].strip()
+        compound_name = line[132:334].strip()
+        first_approval = line[334:342].strip()
+        withdrawn_flag = line[342:346].strip()
+        standard_inchi = line[346:].strip()
+        if exists_compound_by_chembl_id(compound_chembl_id):
+            compound_id = get_compound_id_by_chembl_id(compound_chembl_id)
+            compound_record = lookup_compound_by_id(compound_id)
+        else:
+            if withdrawn_flag == '1':
+                approval_status = 'WITHDRAWN'
+            else:
+                approval_status = ''
+            add_compound(compound_name, '', standard_inchi, 
+                    chembl_id=compound_chembl_id,
+                    first_approval_year=first_approval,
+                    approval_status=approval_status,
+                    sourcedb_name=EXTDB_CHEMBL)
+    compound_file.close()
+    drug_file = open(PATH_TC_CHEMBL_DRUG)
+    for line in drug_file:
+        accession = line[0:14].strip()
+        pref_name = line[14:66].strip()
+        target_chembl_id = line[66:84].strip()
+        compound_chembl_id = line[114:132].strip()
+        compound_chembl_id = line[84:102].strip()
+        compound_name = line[102:134].strip()
+        first_approval = line[134:141].strip()
+        withdrawn_flag = line[141:145].strip()
+        mechanism_of_action = line[145:197].strip()
+        action_type = line[197:229].strip()
+        standard_inchi = line[229:].strip()
+    drug_file.close()
 
 def input_drugbank():
-    drug_info_file = open(OUTPUT_ORGANIZED_DRUG_INFO_DRUGBANK)
+    drug_info_file = open(PATH_TC_DRUG_INFO_DRUGBANK)
     drug_info_file.next()
     for line in drug_info_file:
         drugbank_id = line[0:13].strip()
@@ -1215,8 +1191,7 @@ def input_drugbank():
         record = (drugbank_id, drug_name, status_list, molecular_formula,
                 inchi_string)
     drug_info_file.close()
-    
-    target_info_file = open(OUTPUT_ORGANIZED_TARGET_INFO_DRUGBANK)
+    target_info_file = open(PATH_TC_TARGET_INFO_DRUGBANK)
     target_info_file.next()
     for line in target_info_file:
         drugbank_id = line[0:13].strip()
@@ -1234,7 +1209,7 @@ def input_drugbank():
     target_info_file.close()
 
 def input_hmdb():
-    drug_info_file = open(OUTPUT_ORGANIZED_DRUG_INFO_HMDB)
+    drug_info_file = open(PATH_TC_DRUG_INFO_HMDB)
     drug_info_file.next()
     for line in drug_info_file:
         hmdb_id = line[0:13].strip()
@@ -1243,8 +1218,7 @@ def input_hmdb():
         inchi_string = line[155:].strip()
         record = (hmdb_id, name, molecular_formula, inchi_string)
     drug_info_file.close()
-
-    target_info_file = open(OUTPUT_ORGANIZED_TARGET_INFO_HMDB)
+    target_info_file = open(PATH_TC_TARGET_INFO_HMDB)
     target_info_file.next()
     for line in target_info_file:
         hmdb_id = line[0:13].strip()
@@ -1255,7 +1229,7 @@ def input_hmdb():
     target_info_file.close()
 
 def input_ttd():
-    ttd_file = open(OUTPUT_ORGANIZED_TTD)
+    ttd_file = open(PATH_TC_TTD)
     ttd_file.next()
     for line in ttd_file:
         target_id = line[0:13].strip()
@@ -1276,203 +1250,90 @@ def input_ttd():
                 ttd_drug_id, drug_name, inchi)
     ttd_file.close()
 
-def input_chembl_uniprot():
-    compound_file = open(OUTPUT_QUERY_CHEMBL_UNIPROT_COMPOUND)
-    for line in compound_file:
-        accession = line[0:14].strip()
-        pref_name = line[14:96].strip()
-        target_chembl_id = line[96:114].strip()
-        
-        # Is this a new target?
-        # If yes, add it to the database
-        # If no, check values match, updating if necessary
-        
-        if exists_protein(accession):
-            protein_record = lookup_protein_by_accnum(accession)
-            if protein_record[2] == '':
-                update_protein_name(accession, pref_name)
-            if protein_record[9] == '':
-                update_protein_chembl_id(accession, target_chembl_id)
-        else:
-            add_protein(accession, name=pref_name)
-        
-        compound_chembl_id = line[114:132].strip()
-        compound_name = line[132:334].strip()
+def setup_all_proteins():
+    mapping_dict = {}
+    uniprot_symbol_file = open(PATH_UNIPROT_HUMAN_IDMAPPING)
+    for line in uniprot_symbol_file:
+        uniprot_accum = line.strip().split()[0]
+        gene_symbol = line.strip().split()[2]
+        mapping_dict[gene_symbol] = uniprot_accum
+    uniprot_symbol_file.close()
+    prot_file = open(PATH_BIOGPS_GNF1H_ANNOT, 'rU')
+    prot_reader = csv.reader(prot_file, delimiter='\t')
+    prot_reader.next()
+    for row in prot_reader:
+        gene_symbol = row[6]
+        if not gene_symbol in mapping_dict:
+            'Could not find uniprot accession for %s' % gene_symbol
+            continue
+        uniprot_accum = mapping_dict[gene_symbol]
+        if exists_protein(uniprot_accum):
+            continue
+        add_protein(uniprot_accum, gene_symbol, '', '')
+    prot_file.close()
+
+def setup_chembl():
+    chembl_compound_file = open(PATH_TC_CHEMBL_COMPOUND)
+    chembl_compound_file.next()
+    for line in chembl_compound_file:
+        line = ''.join([i if ord(i) < 128 else '' for i in line])
+        uniprot = line[0:14].strip()
+        target_name = line[14:96].strip()
+        target_id = line[96:114].strip()
+        chembl_compound_id = line[114:132].strip()
+        compound_name_in_doc = line[132:334].strip()
         first_approval = line[334:342].strip()
         withdrawn_flag = line[342:346].strip()
-        standard_inchi = line[346:].strip()
-        
-        # Is this a new compound?
-        # If yes, add it to the database
-        # If no, check values match, updating if necessary
-        
-        if exists_compound(compound_chembl_id):
-            compound_id = lookup_compound_by_chembl_id(compound_chembl_id)
-            compound_record = lookup_compound_by_id(compound_id)
-        else:
-            if withdrawn_flag == '1':
+        inchi = line[346:].strip()
+        if exists_protein(uniprot) and not exists_compound_by_chembl_id(chembl_compound_id):
+            if withdrawn_flag == 1:
                 approval_status = 'WITHDRAWN'
             else:
-                approval_status = ''
-            add_compound('', standard_inchi, compound_name,
-                    chembl_id=compound_chembl_id,
-                    first_approval_year=first_approval,
-                    approval_status=approval_status, sourcedb_name=EXTDB_CHEMBL)
+                approval_status = 'UNKNOWN'
+            add_compound(compound_name_in_doc, '', '', chembl_compound_id, '',
+                    approval_status, first_approval, EXTDB_CHEMBL)
+        if exists_protein(uniprot) and exists_compound_by_chembl_id(chembl_compound_id):
+            compound_id = get_compound_id_by_compound_name(chembl_compound_id)
+            if not exists_interaction(uniprot, compound_id):
+                add_interaction(uniprot, compound_id, 
+                        sourcedb_name=EXTDB_CHEMBL)
+    chembl_compound_file.close()
 
-        # Add an interaction record for the (target, compound) pair
-        
-        # INCOMPLETE
-        
-    compound_file.close()
-    drug_file = open(OUTPUT_QUERY_CHEMBL_UNIPROT_DRUG)
-    for line in drug_file:
-        accession = line[0:14].strip()
-        pref_name = line[14:66].strip()
-        target_chembl_id = line[66:84].strip()
-        
-        # Is this a new target?
-        # If yes, add it to the database
-        # If no, check values match, updating if necessary
-        
-        # INCOMPLETE
-        
-        compound_chembl_id = line[114:132].strip()
-        compound_chembl_id = line[84:102].strip()
-        compound_name = line[102:134].strip()
-        first_approval = line[134:141].strip()
-        withdrawn_flag = line[141:145].strip()
-        mechanism_of_action = line[145:197].strip()
-        action_type = line[197:229].strip()
-        standard_inchi = line[229:].strip()
-        
-        # Is this a new compound?
-        # If yes, add it to the database
-        # If no, check values match, updating if necessary
-        
-        # INCOMPLETE
-        
-        # Add an interaction record for the (target, compound) pair
-        
-        # INCOMPLETE
-        
-    drug_file.close()
-
-def input_chembl_assays():
-    compound_file = open(OUTPUT_COMPOUND_ASSAYS)
-    for line in compound_file:
-        line_split = line.split('\t')
-        uniprot = line_split[0].strip()
-        target_chembl_id = line_split[1].strip()
-        target_type = line_split[2].strip()
-        target_name = line_split[3].strip()
-        compound_chembl_id = line_split[4].strip()
-        compound_name = line_split[5].strip()
-        iupac_name = line_split[6].strip()
-        assay_chembl_id = line_split[7].strip()
-        assay_standard_type = line_split[8].strip()
-        assay_standard_relation = line_split[9].strip()
-        assay_value = line_split[10].strip()
-        assay_units = line_split[11].strip()
-        assay_type = line_split[12].strip() # Not used
-        assay_description = line_split[13].strip() # Not used
-        
-        if not exists_compound(compound_chembl_id):
-            #add_compound('', '', compound_name.decode('utf_8').encode('utf_8'), 
-            #        chembl_id=compound_chembl_id.decode('utf_8').encode('utf_8'),
-            #        synonyms=iupac_name.decode('utf_8').encode('utf_8'),
-            #        sourcedb_name=EXTDB_CHEMBL)
-            add_compound('', '', compound_name, 
-                    chembl_id=compound_chembl_id,
-                    synonyms=iupac_name,
+def setup_target_compound():
+    tcf = open(PATH_TARGET_COMPOUND)
+    tcr = csv.reader(tcf)
+    tcr.next()
+    for row in tcr:
+        uniprot = row[1]
+        effect_type = row[7]
+        compound_name = row[9]
+        if compound_name == '':
+            continue
+        chembl_id = row[10]
+        param = row[11]
+        value = float(row[12])
+        if exists_protein(uniprot):
+            if not exists_compound_by_chembl_id(chembl_id):
+                add_compound(compound_name, '', '', chembl_id, 
+                        '', '', '', EXTDB_CHEMBL)
+            compound_id = get_compound_id_by_chembl_id(chembl_id)
+            add_interaction(uniprot, compound_id, action_type=effect_type,
+                    strength=value, strength_units=param,
                     sourcedb_name=EXTDB_CHEMBL)
-        
-        if not exists_protein(uniprot):
-            add_protein(uniprot, name=target_name,
-                    process_function=target_type, chembl_id=target_chembl_id)
-    
-        compound_id = lookup_compound_by_chembl_id(compound_chembl_id)
+    tcf.close()
 
-        if not exists_interaction(uniprot, compound_id):
-            #if uniprot in ['Q12809', 'Q6U279', 'Q6U283', 'Q6U287', 'Q86U57']:
-            #    print uniprot, assay_value
-
-            #add_interaction(uniprot, compound_id,
-            #        action_type=target_type.decode('utf_8').encode('utf_8'),
-            #        strength=assay_value.decode('utf_8').encode('utf_8'),
-            #        strength_units=assay_units.decode('utf_8').encode('utf_8'),
-            #        assay_type=assay_standard_type.decode('utf_8').encode('utf_8'),
-            #        chembl_id=assay_chembl_id,
-            #        sourcedb_name=EXTDB_CHEMBL)
-
-            add_interaction(uniprot, compound_id,
-                    action_type='',
-                    strength=assay_value.decode('utf_8').encode('utf_8'),
-                    strength_units=assay_units.decode('utf_8').encode('utf_8'),
-                    assay_type=assay_standard_type.decode('utf_8').encode('utf_8'),
-                    chembl_id=assay_chembl_id,
-                    sourcedb_name=EXTDB_CHEMBL)
-
-                    
-        if assay_standard_relation != '=':
-            print 'Assay standard relation is not ='
-
-    compound_file.close()
-    drug_file = open(OUTPUT_DRUG_ASSAYS)
-    for line in drug_file:
-        line_split = line.split('\t')
-        uniprot = line_split[0].strip()
-        target_chembl_id = line_split[1].strip()
-        target_type = line_split[2].strip()
-        target_name = line_split[3].strip()
-        drug_mechanism = line_split[4].strip()
-        dosed_compound_chembl_id = line_split[5].strip()
-        dosed_compound_name = line_split[6].strip()
-        active_compound_chembl_id = line_split[7].strip()
-        active_compound_name = line_split[8].strip()
-        assay_chembl_id = line_split[9].strip()
-        assay_standard_type = line_split[10].strip()
-        assay_standard_relation = line_split[11].strip()
-        assay_value = line_split[12].strip()
-        assay_units = line_split[13].strip()
-        assay_type = line_split[14].strip()
-        assay_description = line_split[15].strip()
-
-        if not exists_compound(active_compound_chembl_id):
-            add_compound('', '', active_compound_name, 
-                    chembl_id=active_compound_chembl_id,
-                    synonyms=dosed_compound_name,
-                    sourcedb_name=EXTDB_CHEMBL)
-        
-        if not exists_protein(uniprot):
-            add_protein(uniprot, name=target_name,
-                    process_function=target_type, chembl_id=target_chembl_id)
-
-        compound_id = lookup_compound_by_chembl_id(active_compound_chembl_id)
-
-        if not exists_interaction(uniprot, compound_id):
-            add_interaction(uniprot, compound_id,
-                    action_type=drug_mechanism.decode('utf_8').encode('utf_8'),
-                    strength=assay_value.decode('utf_8').encode('utf_8'),
-                    strength_units=assay_units.decode('utf_8').encode('utf_8'),
-                    assay_type=assay_standard_type.decode('utf_8').encode('utf_8'),
-                    chembl_id=assay_chembl_id,
-                    sourcedb_name=EXTDB_CHEMBL)
-
-    drug_file.close()
-
-def write_important_data():
-
+def print_important_data():
     tissue_name_list = []
     tissue_record_list = get_all_tissues()
     for tissue in tissue_record_list:
         tissue_name = tissue[0]
         tissue_name_list.append(tissue_name)
     protein_upac_list = []
-    protein_record_list = get_all_protein_uniprot()
+    protein_record_list = get_all_protein_uniprots()
     for protein_record in protein_record_list:
         upac = protein_record[0]
         has_expression = exists_expression(upac)
-        has_interaction = exists_any_interaction(upac)
+        has_interaction = exists_any_interaction_for_protein(upac)
         if has_expression and has_interaction:
             protein_upac_list.append(upac)
     line = 'Uniprot Accession,Gene Symbol,Number of interacting compounds,In BETSE?,'
@@ -1484,12 +1345,15 @@ def write_important_data():
         line = ''
         line += upac
         line += ','
-        line += lookup_gene_symbol_by_uniprot_accnum(upac)
+        line += lookup_gene_symbol_by_uniprot(upac)
         line += ','
         number_of_interacting_compounds = len(lookup_interaction_by_uniprot(upac))
         line += '%d' % number_of_interacting_compounds
         line += ','
-        in_betse_yn = is_in_betse(upac)
+        if is_in_betse(upac):
+            in_betse_yn = 'Y'
+        else:
+            in_betse_yn = 'N'
         line += in_betse_yn
         line += ','
         for tissue_name in tissue_name_list:
@@ -1501,78 +1365,40 @@ def write_important_data():
             line += '%.2f' % avg_expr_level
             line += ','
         print line
-        
 
 
-#expressed_protein_dict = {}
-#tissue_list = get_all_tissues()
-#for tissue in tissue_list:
-#    tissue_name = tissue[0]
-#    expression_record_list = get_all_expression()
-#    for expression_record in expression_record_list:
-#        expression_id = expression_record[0]
-#        expression_tissue_name = expression_record[1]
-#        expression_protein_uniprot_accnum = expression_record[2]
-#        if expression_tissue_name == tissue_name:
-#            if not expression_protein_uniprot_accnum in expressed_protein_dict:
-#                if exists_any_interaction(expression_protein_uniprot_accnum):
-#                    expressed_protein_dict[expression_protein_uniprot_accnum] = 1
-#for protein in expressed_protein_list:
-#    line = ''
-#    line += expression_protein_uniprot_accnum + ','
-#    expression_record_list = get_all_expression()
-#    for expression_record in expression_record_list:
-#        expression_id = expression_record[0]
-#        expression_tissue_name = expression_record[1]
-#        expression_protein_uniprot_accnum = expression_record[2]
-#        expression_level = expression_record[3]
-#        line += expression_level + ','
-#    print line
+def normalize_prot_expr_list(prot_expr_list):
+    normalized_list = []
+    total_expr = 0.0
+    for elem in prot_expr_list:
+        upac = elem[0]
+        expr = elem[1]
+        total_expr += expr
+    for elem in prot_expr_list:
+        upac = elem[0]
+        expr = elem[1]
+        norm_expr = expr / total_expr
+        normalized_list.append((upac, norm_expr))
+    return normalized_list
 
-#   myresults = form.cleaned_data
-#    tissue_selection = myresults['tissue_mc']
-#    tissue_selection.sort()
-#    protein_selection = myresults['protein_mc']
-#
-#    protein_label_list = []
-#    protein_label_dict = {}
-#    for upac in protein_selection:
-#        protein = Protein.objects.get(uniprotaccnum=upac)
-#        ic_subclass = protein.ionchannelsubclass
-#        #ic_class = Channelsubclass.objects.get(name=ic_subclass).class_field
-#        #ic_superclass = Channelclass.objects.get(name=ic_class).superclass
-#        protein_label = '%s (%s)' % (protein.uniprotaccnum, protein.genesymbol)
-#        protein_label_list.append(protein_label)
-#        protein_label_dict[protein_label] = upac
-#    protein_label_list.sort()
-#
-#    final_results = []
-#    for tissue_name in tissue_selection:
-#        for protein_label in protein_label_list:
-#            upac = protein_label_dict[protein_label]
-#            expression_level_qs = Expression.objects.filter(tissuename=tissue_name).filter(proteinuniprotaccnum=upac)
-#            if len(expression_level_qs) < 1:
-#                expression_level = '0.00'
-#            else:
-#                expression_level = expression_level_qs[0].exprlevel
-#            interaction_qs = Interaction.objects.filter(targetuniprotaccnum=upac)
-#            if len(interaction_qs) > 0:
-#                for interaction in interaction_qs:
-#                    compound_id = interaction.compoundid
-#                    compound_record = Compound.objects.get(id=compound_id)
-#                    compound_name = compound_record.name
-#                    compound_chemblid = compound_record.chemblid
-#                    compound_label = '%s (%s)' % (compound_name, compound_chemblid)
-#                    effect_type = ''
-#                    param_type = interaction.assaytype
-#                    param_value = '%.2f' % interaction.strength
-#
-#                    final_results.append([tissue_name, protein_label, expression_level,
-#                            compound_label, effect_type, param_type, param_value])
-#            else:
-#                final_results.append([tissue_name, protein_label, expression_level,
-#                            '', '', '', ''])
+def get_uniprot_seq(upac):
+    ls = os.listdir('data/seq')
+    fn = '%s.fasta' % upac
+    if fn == 'Q96LR1.fasta':
+        return ''
+    if not fn in ls:
+        cmd = 'wget -O data/seq/%s http://www.uniprot.org/uniprot/%s' % (fn, fn)
+        os.system(cmd)
+    f = open('data/seq/%s' % fn)
+    f.next()
+    seqlist = []
+    for line in f:
+        seqlist.append(line.strip())
+    f.close()
+    seq = ''.join(seqlist)
+    return seq
 
-
+def remove_nonascii(s):
+    return s.encode('ascii', errors='ignore')
 
 
