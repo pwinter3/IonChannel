@@ -24,6 +24,8 @@ EXTDB_ZINC15 = 'zinc15'
 
 # Constant paths
 
+PATH_DB = '/home/ubuntu/webserver/ionchannel/levin.db'
+
 PATH_BIOGPS_GCRMA = 'data/biogps/U133AGNF1B.gcrma.avg.csv'
 PATH_BIOGPS_GNF1H_ANNOT = 'data/biogps/gnf1h.annot2007.tsv'
 PATH_BIOGPS_TRANSLATION_TABLE = 'data/biogps/biogps_translation_table.csv'
@@ -34,7 +36,6 @@ PATH_CHEMBL_ASSAYS_COMPOUND = 'data/chembl-assays/output_compound-assays_v1.1.da
 PATH_CHEMBL_ASSAYS_DRUG = 'data/chembl-assays/output_drug-assays_v1.1.dat'
 PATH_CHEMBL_HUMAN_ASSAYS_COMPOUND = 'data/chembl-assays/output_human_compound-assays_v1.1.dat'
 PATH_CHEMBL_HUMAN_ASSAYS_DRUG = 'data/chembl-assays/output_human_drug-assays_v1.1.dat'
-PATH_DB = 'levin.db'
 PATH_GO_ION_CHANNELS = 'data/go/ion-channels-1.csv'
 PATH_GO_QUICKGO = 'data/go/QuickGO-ion-channel-COMBINED-human.dat'
 PATH_HPA_RNA_TISSUE = 'data/hpa/rna_tissue.tsv'
@@ -135,6 +136,13 @@ def create_tables():
     conn.commit()
     conn.close()
 
+def vacuum():
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''VACUUM;''')
+    conn.commit()
+    conn.close()
+
 
 # Routines for ChannelSuperClass table
 
@@ -230,7 +238,7 @@ def add_tissue(name, bto_id='', parent_tissue_name=''):
     conn.commit()
     conn.close()
 
-def get_all_tissues():
+def get_all_tissue_names():
     conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
     curs.execute('''SELECT Name FROM Tissue''')
@@ -360,18 +368,17 @@ def lookup_protein(upac):
     conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
     curs.execute('''SELECT UniProtAccNum, GeneSymbol, Name, ProcessFunction,
-            Ions, Gating, InBETSE, IonChannelClassDesc, IonChannelSubClass,
-            ChemblId FROM Protein WHERE UniProtAccNum=?''', 
-        (upac,))
+        Ions, Gating, InBETSE, IonChannelClassDesc, IonChannelSubClass,
+        ChemblId FROM Protein WHERE UniProtAccNum=?''', (upac,))
     resultset = curs.fetchone()
     if resultset == None:
-        result = ''
+        result = ['','','','','','','','','','']
     else:
         result = resultset
     conn.close()
     return result
 
-def lookup_uniprots_by_gene_symbol(gene_symbol):
+def get_uniprots_by_gene_symbol(gene_symbol):
     conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
     curs.execute('''SELECT UniProtAccNum FROM Protein WHERE GeneSymbol=?''', 
@@ -384,7 +391,7 @@ def lookup_uniprots_by_gene_symbol(gene_symbol):
     conn.close()
     return resultset
 
-def lookup_gene_symbol_by_uniprot(upac):
+def get_gene_symbol_by_uniprot(upac):
     conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
     curs.execute('''SELECT GeneSymbol FROM Protein WHERE UniProtAccNum=?''', 
@@ -456,7 +463,21 @@ def exists_expression(upac):
     conn.close()
     return result
 
-def get_expression_ids_by_uniprot(upac):
+def lookup_expr(id):
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''SELECT Id, TissueName, ProteinUniProtAccNum, ExprLevel,
+        ExprUnits, AssayType, DatasetName, SourceDBName
+        FROM Expression WHERE Id=?''', (id,))
+    resultset = curs.fetchone()
+    if resultset == None:
+        result = ['', '', '', 0.0, '', '', '', '']
+    else:
+        result = resultset
+    conn.close()
+    return result
+    
+def get_expr_ids_by_uniprot(upac):
     conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
     curs.execute('''SELECT Id FROM Expression WHERE ProteinUniProtAccNum=?''', 
@@ -486,6 +507,16 @@ def get_expr_levels(upac, tissue):
     conn.close()
     return resultset
 
+def get_expr_level_for_dataset(upac, tissue, dataset):
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''SELECT ExprLevel FROM Expression
+        WHERE ProteinUniProtAccNum=? AND TissueName=? AND DatasetName=?''',
+        (upac, tissue, dataset))
+    resultset = curs.fetchall()
+    conn.close()
+    return resultset
+
 def get_all_expression():
     conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
@@ -494,6 +525,20 @@ def get_all_expression():
     conn.close()
     return resultset
 
+def exists_expr_threshold(tissue, upac, threshold, dataset):
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''SELECT EXISTS(SELECT 1 FROM Expression
+        WHERE (TissueName=? AND ProteinUniProtAccNum=?
+        AND DatasetName=? AND ExprLevel>=?) LIMIT 1)''',
+        (tissue, upac, dataset, threshold))
+    row = curs.fetchone()
+    if row[0] == 1:
+        result = True
+    else:
+        result = False
+    conn.close()
+    return result
 
 # Routines for DBGene table
 
@@ -568,7 +613,7 @@ def lookup_compound(id):
         (id,))
     resultset = curs.fetchone()
     if resultset == None:
-        result = ''
+        result = ['', '', '', '', '', '', '', '', '']
     else:
         result = resultset
     conn.close()
@@ -654,6 +699,19 @@ def get_interaction_ids_by_uniprot(upac):
     conn.close()
     return resultset
 
+def lookup_interaction(id):
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''SELECT Id, TargetUniProtAccNum, CompoundId, ActionType,
+        ActionDesc, Strength, StrengthUnits, AssayType, ChemblId, SourceDBName
+        FROM Interaction WHERE Id=?''', (id,))
+    resultset = curs.fetchone()
+    if resultset == None:
+        result = ['', '', '', '', '', '', '', '', '', '']
+    else:
+        result = resultset[0]
+    conn.close()
+    return resultset
 
 # Routines for DBTissue table
 
@@ -712,10 +770,19 @@ def print_db_stats():
     for upac_record in upac_record_list:
         upac = upac_record[0]
         interaction_id_list = get_interaction_ids_by_uniprot(upac)
-        expression_id_list = get_expression_ids_by_uniprot(upac)
+        expression_id_list = get_expr_ids_by_uniprot(upac)
         if len(interaction_id_list) > 0 and len(expression_id_list) > 0:
             useful_data_count += 1
     print 'Protein with interaction and expression %d' % useful_data_count
+    upac_record_list = get_all_protein_uniprots()
+    in_betse_count = 0
+    for upac_record in upac_record_list:
+        upac = upac_record[0]
+        protein_record = lookup_protein(upac)
+        in_betse = protein_record[6]
+        if in_betse == 'Y':
+            in_betse_count += 1
+    print 'Number of proteins in betse = %d' % in_betse_count
 
 
 # DB management functions
@@ -802,7 +869,9 @@ def setup_ion_channels():
         gating = row[5]
         ion_channel_subclass = row[6]
         in_betse = row[7]
-        if not in_betse == 'Y':
+        if in_betse == 'yes':
+            in_betse = 'Y'
+        else:
             in_betse = 'N'
         if not exists_protein(upac):
             add_protein(upac, gene_symbol, protein_name,
@@ -825,14 +894,6 @@ def setup_ion_channels():
             update_protein_ions(upac, ions)
             update_protein_gating(upac, gating)
             if old_in_betse == '':
-                if in_betse == 'yes':
-                    in_betse = 'Y'
-                elif in_betse == 'soon':
-                    in_betse = 'N'
-                elif in_betse == 'doable':
-                    in_betse = 'N'
-                else:
-                    in_betse = 'N'
                 update_protein_in_betse(upac, in_betse)
             update_protein_ion_channel_sub_class(upac, ion_channel_subclass)
     prot_file.close()
@@ -870,7 +931,7 @@ def setup_channel_classes():
             add_channel_class(channel_class, channel_superclass)
         if not exists_channel_sub_class(channel_subclass):
             add_channel_sub_class(channel_subclass, channel_class)
-        upac_record_list = lookup_uniprots_by_gene_symbol(gene_symbol)
+        upac_record_list = get_uniprots_by_gene_symbol(gene_symbol)
         for upac_record in upac_record_list:
             upac = upac_record[0]
             update_protein_sub_class(upac, channel_subclass)
@@ -938,7 +999,7 @@ def process_biogps_data():
         if not probeset_id in annot_dict:
             continue
         gene_symbol = annot_dict[probeset_id]
-        upac_resultset = lookup_uniprots_by_gene_symbol(gene_symbol.strip())
+        upac_resultset = get_uniprots_by_gene_symbol(gene_symbol.strip())
         if len(upac_resultset) == 0:
             continue
         for i in xrange(0, len(tissue_list)):
@@ -1347,7 +1408,7 @@ def print_important_data():
         line += ','
         line += lookup_gene_symbol_by_uniprot(upac)
         line += ','
-        number_of_interacting_compounds = len(lookup_interaction_by_uniprot(upac))
+        number_of_interacting_compounds = len(get_interaction_ids_by_uniprot(upac))
         line += '%d' % number_of_interacting_compounds
         line += ','
         if is_in_betse(upac):

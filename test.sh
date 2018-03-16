@@ -24,6 +24,7 @@ python -c "from levindb import *;cleanup_channel_classes()"
 python -c "from levindb import *;setup_channel_classes()"
 python -c "from levindb import *;dump_database()"
 python -c "from levindb import *;print_db_stats()"
+python -c "from levindb import *;vacuum()"
 
 # Not implemented or deprecated:
 #python -c "from levindb import *;get_expression_prob()"
