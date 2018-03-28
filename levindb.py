@@ -157,6 +157,13 @@ def vacuum():
     conn.commit()
     conn.close()
 
+def vacuum():
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''VACUUM;''')
+    conn.commit()
+    conn.close()
+
 
 # Routines for ChannelSuperClass table
 
@@ -556,7 +563,7 @@ def exists_expr_threshold(tissue, upac, threshold, dataset):
     curs = conn.cursor()
     curs.execute('''SELECT EXISTS(SELECT 1 FROM Expression
         WHERE (TissueName=? AND ProteinUniProtAccNum=?
-        AND DatasetName=? AND ExprLevel>=?)LIMIT 1)''',
+        AND DatasetName=? AND ExprLevel>=?) LIMIT 1)''',
         (tissue, upac, dataset, threshold))
     row = curs.fetchone()
     if row[0] == 1:
@@ -730,9 +737,13 @@ def lookup_interaction(id):
     conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
     curs.execute('''SELECT Id, TargetUniProtAccNum, CompoundId, ActionType,
-        ActionDesc, Strength, StrengthUnits, AssayType, ChemblId, SourceDBName,
-        FROM Interaction WHERE TargetUniProtAccNum=?''', (upac,))
-    resultset = curs.fetchall()
+        ActionDesc, Strength, StrengthUnits, AssayType, ChemblId, SourceDBName
+        FROM Interaction WHERE Id=?''', (id,))
+    resultset = curs.fetchone()
+    if resultset == None:
+        result = ['', '', '', '', '', '', '', '', '', '']
+    else:
+        result = resultset[0]
     conn.close()
     return resultset
 
@@ -845,10 +856,6 @@ def print_db_stats():
 #    print 'Proteins in betse with no expression'
 #    for gs in list_in_betse_no_expr:
 #        print '%s' % (gs,)
-
-def debug():
-    if exists_protein('O00555'):
-        print 'O00555 exists'
 
 
 # DB management functions
@@ -1632,7 +1639,7 @@ def print_important_data():
         line += ','
         line += lookup_gene_symbol_by_uniprot(upac)
         line += ','
-        number_of_interacting_compounds = len(lookup_interaction_by_uniprot(upac))
+        number_of_interacting_compounds = len(get_interaction_ids_by_uniprot(upac))
         line += '%d' % number_of_interacting_compounds
         line += ','
         if is_in_betse(upac):
