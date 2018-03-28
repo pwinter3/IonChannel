@@ -4,6 +4,8 @@ import go_obo_parser
 import os
 import sqlite3
 import unicodecsv
+import time
+import sys
 
 
 # Constants to be stored in db
@@ -24,6 +26,8 @@ EXTDB_ZINC15 = 'zinc15'
 
 # Constant paths
 
+PATH_DB = 'levin.db'
+
 PATH_BIOGPS_GCRMA = 'data/biogps/U133AGNF1B.gcrma.avg.csv'
 PATH_BIOGPS_GNF1H_ANNOT = 'data/biogps/gnf1h.annot2007.tsv'
 PATH_BIOGPS_TRANSLATION_TABLE = 'data/biogps/biogps_translation_table.csv'
@@ -34,7 +38,6 @@ PATH_CHEMBL_ASSAYS_COMPOUND = 'data/chembl-assays/output_compound-assays_v1.1.da
 PATH_CHEMBL_ASSAYS_DRUG = 'data/chembl-assays/output_drug-assays_v1.1.dat'
 PATH_CHEMBL_HUMAN_ASSAYS_COMPOUND = 'data/chembl-assays/output_human_compound-assays_v1.1.dat'
 PATH_CHEMBL_HUMAN_ASSAYS_DRUG = 'data/chembl-assays/output_human_drug-assays_v1.1.dat'
-PATH_DB = 'levin.db'
 PATH_GO_ION_CHANNELS = 'data/go/ion-channels-1.csv'
 PATH_GO_QUICKGO = 'data/go/QuickGO-ion-channel-COMBINED-human.dat'
 PATH_HPA_RNA_TISSUE = 'data/hpa/rna_tissue.tsv'
@@ -51,6 +54,10 @@ PATH_UNIPROT_ENSEMBL_IDMAPPING = 'data/uniprot/HUMAN_9606_idmapping_Ensembl.dat'
 PATH_UNIPROT_GENBANK = 'data/uniprot/GenBankUniProt.txt' 
 PATH_UNIPROT_HUMAN_IDMAPPING = 'data/uniprot/HUMAN_9606_idmapping.dat'
 
+PATH_HPA_PATHOLOGY = 'data/hpa/pathology.tsv'
+PATH_CHANNELPEDIA_INFO = 'data/channel-classes/channelpedia_info.csv'
+PATH_HPA_NORMAL = 'data/hpa/normal_tissue.tsv'
+
 
 # Table definitions
 
@@ -64,7 +71,9 @@ def create_tables():
         SuperClass TEXT NOT NULL);''')
     curs.execute('''CREATE TABLE ChannelSubClass(
         Name TEXT PRIMARY KEY NOT NULL,
-        Class TEXT NOT NULL);''')
+        Class TEXT NOT NULL,
+        ChannelpediaText TEXT NOT NULL,
+        ChannelpediaURL TEXT NOT NULL);''')
     curs.execute('''CREATE TABLE Tissue(
         Name TEXT PRIMARY KEY NOT NULL,
         BTOId TEXT UNIQUE NOT NULL,
@@ -98,6 +107,7 @@ def create_tables():
         TissueName TEXT NOT NULL,
         ProteinUniProtAccNum TEXT NOT NULL,
         ExprLevel REAL NOT NULL,
+        ExprLevelQual TEXT NOT NULL,
         ExprUnits TEXT NOT NULL,
         AssayType TEXT NOT NULL,
         DatasetName TEXT NOT NULL,
@@ -132,6 +142,18 @@ def create_tables():
         AssayType TEXT NOT NULL,
         ChemblId TEXT NOT NULL,
         SourceDBName TEXT NOT NULL);''')
+    curs.execute('''CREATE TABLE Specificity(
+        Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+        TissueName TEXT NOT NULL,
+        UniProtAccNum TEXT NOT NULL,
+        SpecificityScore TEXT NOT NULL);''')
+    conn.commit()
+    conn.close()
+
+def vacuum():
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''VACUUM;''')
     conn.commit()
     conn.close()
 
@@ -186,11 +208,12 @@ def exists_channel_class(name):
 
 # Routines for ChannelSubClass table
 
-def add_channel_sub_class(name, channel_class=''):
+def add_channel_sub_class(name, channel_class='', channelpedia_text='', channelpedia_url=''):
     conn = sqlite3.connect(PATH_DB)
+    conn.text_factory = str
     curs = conn.cursor()
-    curs.execute('''INSERT INTO ChannelSubClass (Name, Class)
-        VALUES (?, ?)''', (name, channel_class))
+    curs.execute('''INSERT INTO ChannelSubClass (Name, Class, ChannelpediaText, ChannelpediaURL)
+        VALUES (?, ?, ?, ?)''', (name, channel_class, channelpedia_text, channelpedia_url))
     conn.commit()
     conn.close()
 
@@ -230,7 +253,7 @@ def add_tissue(name, bto_id='', parent_tissue_name=''):
     conn.commit()
     conn.close()
 
-def get_all_tissues():
+def get_all_tissue_names():
     conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
     curs.execute('''SELECT Name FROM Tissue''')
@@ -361,17 +384,16 @@ def lookup_protein(upac):
     curs = conn.cursor()
     curs.execute('''SELECT UniProtAccNum, GeneSymbol, Name, ProcessFunction,
             Ions, Gating, InBETSE, IonChannelClassDesc, IonChannelSubClass,
-            ChemblId FROM Protein WHERE UniProtAccNum=?''', 
-        (upac,))
+            ChemblId FROM Protein WHERE UniProtAccNum=?''', (upac,))
     resultset = curs.fetchone()
     if resultset == None:
-        result = ''
+        result = ['','','','','','','','','','']
     else:
         result = resultset
     conn.close()
     return result
 
-def lookup_uniprots_by_gene_symbol(gene_symbol):
+def get_uniprots_by_gene_symbol(gene_symbol):
     conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
     curs.execute('''SELECT UniProtAccNum FROM Protein WHERE GeneSymbol=?''', 
@@ -384,7 +406,7 @@ def lookup_uniprots_by_gene_symbol(gene_symbol):
     conn.close()
     return resultset
 
-def lookup_gene_symbol_by_uniprot(upac):
+def get_gene_symbol_by_uniprot(upac):
     conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
     curs.execute('''SELECT GeneSymbol FROM Protein WHERE UniProtAccNum=?''', 
@@ -432,16 +454,17 @@ def dump_proteins():
 
 # Routines for Expression table
 
-def add_expression(tissue_name, upac, expr_level, expr_units='',
+def add_expression(tissue_name, upac, expr_level, expr_level_qual='', expr_units='',
         assay_type='', dataset_name='', sourcedb_name=''):
     conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
     curs.execute('''INSERT INTO Expression (TissueName, ProteinUniProtAccNum,
-        ExprLevel, ExprUnits, AssayType, DatasetName, SourceDBName)
-        VALUES (?, ?, ?, ?, ?, ?, ?)''', (tissue_name, upac, expr_level,
+        ExprLevel, ExprLevelQual, ExprUnits, AssayType, DatasetName, SourceDBName)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)''', (tissue_name, upac, expr_level, expr_level,
         expr_units, assay_type, dataset_name, sourcedb_name))
     conn.commit()
     conn.close()
+
 
 def exists_expression(upac):
     conn = sqlite3.connect(PATH_DB)
@@ -456,7 +479,21 @@ def exists_expression(upac):
     conn.close()
     return result
 
-def get_expression_ids_by_uniprot(upac):
+def lookup_expr(id):
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''SELECT Id, TissueName, ProteinUniProtAccNum, ExprLevel, ExprLevelQual,
+        ExprUnits, AssayType, DatasetName, SourceDBName
+        FROM Expression WHERE Id=?''', (id,))
+    resultset = curs.fetchone()
+    if resultset == None:
+        result = ['', '', '', 0.0, '', '', '', '', '']
+    else:
+        result = resultset
+    conn.close()
+    return result
+    
+def get_expr_ids_by_uniprot(upac):
     conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
     curs.execute('''SELECT Id FROM Expression WHERE ProteinUniProtAccNum=?''', 
@@ -486,6 +523,26 @@ def get_expr_levels(upac, tissue):
     conn.close()
     return resultset
 
+def get_expr_level_quals(upac, tissue):
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''SELECT ExprLevelQual FROM Expression
+        WHERE ProteinUniProtAccNum=? AND TissueName=?
+        AND ExprLevelQual!=""''', (upac, tissue))
+    resultset = curs.fetchall()
+    conn.close()
+    return resultset
+
+def get_expr_level_for_dataset(upac, tissue, dataset):
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''SELECT ExprLevel FROM Expression
+        WHERE ProteinUniProtAccNum=? AND TissueName=? AND DatasetName=?''',
+        (upac, tissue, dataset))
+    resultset = curs.fetchall()
+    conn.close()
+    return resultset
+
 def get_all_expression():
     conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
@@ -493,6 +550,21 @@ def get_all_expression():
     resultset = curs.fetchall()
     conn.close()
     return resultset
+
+def exists_expr_threshold(tissue, upac, threshold, dataset):
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''SELECT EXISTS(SELECT 1 FROM Expression
+        WHERE (TissueName=? AND ProteinUniProtAccNum=?
+        AND DatasetName=? AND ExprLevel>=?)LIMIT 1)''',
+        (tissue, upac, dataset, threshold))
+    row = curs.fetchone()
+    if row[0] == 1:
+        result = True
+    else:
+        result = False
+    conn.close()
+    return result
 
 
 # Routines for DBGene table
@@ -568,7 +640,7 @@ def lookup_compound(id):
         (id,))
     resultset = curs.fetchone()
     if resultset == None:
-        result = ''
+        result = ['', '', '', '', '', '', '', '', '']
     else:
         result = resultset
     conn.close()
@@ -654,6 +726,15 @@ def get_interaction_ids_by_uniprot(upac):
     conn.close()
     return resultset
 
+def lookup_interaction(id):
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''SELECT Id, TargetUniProtAccNum, CompoundId, ActionType,
+        ActionDesc, Strength, StrengthUnits, AssayType, ChemblId, SourceDBName,
+        FROM Interaction WHERE TargetUniProtAccNum=?''', (upac,))
+    resultset = curs.fetchall()
+    conn.close()
+    return resultset
 
 # Routines for DBTissue table
 
@@ -680,6 +761,18 @@ def get_bto_tissue_in_dbtissue(externaldb_name, db_equivalent_tissue_name):
         result = resultset[0]
     conn.close()
     return result
+
+
+# Routines for Specificity table
+
+def add_specificity(tissue_name, upac, specificity_score):
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''INSERT INTO Specificity (TissueName, UniProtAccNum,
+        SpecificityScore)
+        VALUES (?, ?, ?)''', (tissue_name, upac, specificity_score))
+    conn.commit()
+    conn.close()
 
 
 # Routines for multiple tables
@@ -712,10 +805,50 @@ def print_db_stats():
     for upac_record in upac_record_list:
         upac = upac_record[0]
         interaction_id_list = get_interaction_ids_by_uniprot(upac)
-        expression_id_list = get_expression_ids_by_uniprot(upac)
+        expression_id_list = get_expr_ids_by_uniprot(upac)
         if len(interaction_id_list) > 0 and len(expression_id_list) > 0:
             useful_data_count += 1
     print 'Protein with interaction and expression %d' % useful_data_count
+    upac_record_list = get_all_protein_uniprots()
+    in_betse_count = 0
+    in_betse_with_expr_count = 0
+    list_in_betse_with_expr = []
+    list_in_betse_no_expr = []
+    for upac_record in upac_record_list:
+        upac = upac_record[0]
+        protein_record = lookup_protein(upac)
+        in_betse = protein_record[6]
+        if in_betse == 'Y':
+            in_betse_count += 1
+            if exists_expression(upac):
+                in_betse_with_expr_count += 1
+                list_in_betse_with_expr.append(get_gene_symbol_by_uniprot(upac))
+            else:
+                list_in_betse_no_expr.append(get_gene_symbol_by_uniprot(upac))
+    print 'Number of proteins in betse = %d' % in_betse_count
+    print 'Number of proteins in betse with expression = %d' % in_betse_with_expr_count
+#    print 'Proteins in betse with expression'
+#    for gs in list_in_betse_with_expr:
+#        print '%s' % (gs,)
+#    for gs in list_in_betse_with_expr:
+#        upac_record_list = get_uniprots_by_gene_symbol(gs)
+#        upac_record = upac_record_list[0]
+#        upac = upac_record[0]
+#        id_record_list = get_expr_ids_by_uniprot(upac)
+#        id_record = id_record_list[0]
+#        id = id_record[0]
+#        expr_record = lookup_expr(id)
+#        tissue_name = expr_record[1]
+#        expr_level = expr_record[3]
+#        print '%s' % (gs,)
+#        #print '%s %s %.2f' % (gs, tissue_name, expr_level)
+#    print 'Proteins in betse with no expression'
+#    for gs in list_in_betse_no_expr:
+#        print '%s' % (gs,)
+
+def debug():
+    if exists_protein('O00555'):
+        print 'O00555 exists'
 
 
 # DB management functions
@@ -802,7 +935,9 @@ def setup_ion_channels():
         gating = row[5]
         ion_channel_subclass = row[6]
         in_betse = row[7]
-        if not in_betse == 'Y':
+        if in_betse in ['yes', 'soon', 'doable']:
+            in_betse = 'Y'
+        else:
             in_betse = 'N'
         if not exists_protein(upac):
             add_protein(upac, gene_symbol, protein_name,
@@ -825,14 +960,6 @@ def setup_ion_channels():
             update_protein_ions(upac, ions)
             update_protein_gating(upac, gating)
             if old_in_betse == '':
-                if in_betse == 'yes':
-                    in_betse = 'Y'
-                elif in_betse == 'soon':
-                    in_betse = 'N'
-                elif in_betse == 'doable':
-                    in_betse = 'N'
-                else:
-                    in_betse = 'N'
                 update_protein_in_betse(upac, in_betse)
             update_protein_ion_channel_sub_class(upac, ion_channel_subclass)
     prot_file.close()
@@ -855,6 +982,16 @@ def cleanup_channel_classes():
     conn.close()
 
 def setup_channel_classes():
+    channelpedia_dict = {}
+    channelpedia_file = open(PATH_CHANNELPEDIA_INFO)
+    channelpedia_reader = csv.reader(channelpedia_file)
+    channelpedia_reader.next()
+    for row in channelpedia_reader:
+        subclass = row[1]
+        intro_text = row[2]
+        url = row[3]
+        channelpedia_dict[subclass] = (intro_text, url)
+    channelpedia_file.close()
     class_file = open(PATH_CHANNEL_CLASSES, 'rU')
     class_reader = csv.reader(class_file)
     class_reader.next()
@@ -869,8 +1006,15 @@ def setup_channel_classes():
         if not exists_channel_class(channel_class):
             add_channel_class(channel_class, channel_superclass)
         if not exists_channel_sub_class(channel_subclass):
-            add_channel_sub_class(channel_subclass, channel_class)
-        upac_record_list = lookup_uniprots_by_gene_symbol(gene_symbol)
+            if channel_subclass in channelpedia_dict:
+                channelpedia_info, channelpedia_url = channelpedia_dict[channel_subclass]
+            else:
+                channelpedia_info = ''
+                channelpedia_url = ''
+            add_channel_sub_class(channel_subclass, channel_class,
+                    channelpedia_text=channelpedia_info.decode('utf_8').encode('utf_8'),
+                    channelpedia_url=channelpedia_url.decode('utf_8').encode('utf_8'))
+        upac_record_list = get_uniprots_by_gene_symbol(gene_symbol)
         for upac_record in upac_record_list:
             upac = upac_record[0]
             update_protein_sub_class(upac, channel_subclass)
@@ -938,7 +1082,7 @@ def process_biogps_data():
         if not probeset_id in annot_dict:
             continue
         gene_symbol = annot_dict[probeset_id]
-        upac_resultset = lookup_uniprots_by_gene_symbol(gene_symbol.strip())
+        upac_resultset = get_uniprots_by_gene_symbol(gene_symbol.strip())
         if len(upac_resultset) == 0:
             continue
         for i in xrange(0, len(tissue_list)):
@@ -963,27 +1107,106 @@ def read_hpa_map():
     map_file.close()
     return ensembl_to_uniprot
 
+#def process_hpa_data():
+#    ensembl_to_uniprot = read_hpa_map()
+#    hpa_file = open(PATH_HPA_RNA_TISSUE)
+#    hpa_file.next()
+#    for line in hpa_file:
+#        row = line.strip().split('\t')
+#        if len(row) >= 5 and row[0].strip() != '':
+#            ensg = row[0]
+#            if ensg in ensembl_to_uniprot:
+#                upac = ensembl_to_uniprot[ensg]
+#                gene_name = row[1]
+#                tissue_name = row[2]
+#                tissue_bto = get_bto_tissue_in_dbtissue(EXTDB_HPA, tissue_name)
+#                expr_value = float(row[3])
+#        
+#                if ensg == 'ENSG00000141837':
+#                    print upac, gene_name, tissue_name, expr_value
+#                    if exists_protein('O00555'):
+#                        print 'O00555 exists'
+#        
+#                if exists_protein(upac):
+#
+#
+#                    add_expression(tissue_bto, upac, expr_value,
+#                            assay_type=ASSAY_RNASEQ, dataset_name=DATASET_HPA,
+#                            sourcedb_name=EXTDB_HPA)
+#    hpa_file.close()
+
 def process_hpa_data():
-    ensembl_to_uniprot = read_hpa_map()
     hpa_file = open(PATH_HPA_RNA_TISSUE)
     hpa_file.next()
     for line in hpa_file:
         row = line.strip().split('\t')
-        if len(row) < 5 or row[0].strip() == '':
-            continue
-        ensg = row[0]
-        if not ensg in ensembl_to_uniprot:
-            continue
-        upac = ensembl_to_uniprot[ensg]
-        gene_name = row[1]
-        tissue_name = row[2]
-        tissue_bto = get_bto_tissue_in_dbtissue(EXTDB_HPA, tissue_name)
-        expr_value = float(row[3])
-        if exists_protein(upac):
-            add_expression(tissue_bto, upac, expr_value,
-                    assay_type=ASSAY_RNASEQ, dataset_name=DATASET_HPA,
-                    sourcedb_name=EXTDB_HPA)
+        if len(row) >= 5 and row[0].strip() != '':
+            gene_symbol = row[1]
+            upac_record_list = get_uniprots_by_gene_symbol(gene_symbol)
+            if len(upac_record_list) != 0:
+                for upac_record in upac_record_list:
+                    upac = upac_record[0]
+                    gene_name = row[1]
+                    tissue_name = row[2]
+                    tissue_bto = get_bto_tissue_in_dbtissue(EXTDB_HPA, tissue_name)
+                    expr_value = float(row[3])
+                    add_expression(tissue_bto, upac, expr_value,
+                            assay_type=ASSAY_RNASEQ, dataset_name=DATASET_HPA,
+                            sourcedb_name=EXTDB_HPA)
     hpa_file.close()
+
+def process_hpa_cancer_data():
+    hpa_file = open(PATH_HPA_PATHOLOGY)
+    hpa_file.next()
+    expr_qual_choices = ['High', 'Medium', 'Low', 'Not detected']
+    for line in hpa_file:
+        row = line.strip().split('\t')
+        if len(row) >= 6:
+            gene_symbol = row[1]
+            upac_record_list = get_uniprots_by_gene_symbol(gene_symbol)
+            if len(upac_record_list) != 0:
+                for upac_record in upac_record_list:
+                    upac = upac_record[0]
+                    tissue_name = row[2]
+                    tissue_bto = get_bto_tissue_in_dbtissue(EXTDB_HPA, tissue_name)
+                    expr_value = 0.0
+                    data_is_okay = False
+                    try:
+                         patient_counts = map(int, row[3:7])
+                         data_is_okay = True
+                    except:
+                        pass
+                    if data_is_okay:
+                        patient_count_max = max(patient_counts)
+                        patient_count_max_idx = [idx for idx, value in enumerate(patient_counts) if value==patient_count_max][-1]
+                        expr_value_qual = expr_qual_choices[patient_count_max_idx]
+                        add_expression(tissue_bto, upac, expr_value,
+                            expr_level_qual=expr_value_qual,
+                            assay_type=ASSAY_RNASEQ, dataset_name=DATASET_HPA,
+                            sourcedb_name=EXTDB_HPA)
+    hpa_file.close()
+
+def process_hpa_normal_data():
+    hpa_file = open(PATH_HPA_PATHOLOGY)
+    hpa_file.next()
+    for line in hpa_file:
+        row = line.strip().split('\t')
+        if len(row) >= 6:
+            gene_symbol = row[1]
+            upac_record_list = get_uniprots_by_gene_symbol(gene_symbol)
+            if len(upac_record_list) != 0:
+                for upac_record in upac_record_list:
+                    upac = upac_record[0]
+                    tissue_name = row[2]
+                    tissue_bto = get_bto_tissue_in_dbtissue(EXTDB_HPA, tissue_name)
+                    expr_value = 0.0
+                    expr_value_qual = row[4]
+                    add_expression(tissue_bto, upac, expr_value,
+                        expr_level_qual=expr_value_qual,
+                        assay_type=ASSAY_RNASEQ, dataset_name=DATASET_HPA,
+                        sourcedb_name=EXTDB_HPA)
+    hpa_file.close()
+
 
 def cleanup_compounds():
     conn = sqlite3.connect(PATH_DB)
@@ -1070,6 +1293,68 @@ def input_chembl_drugs():
                 assay_type=assay_standard_type.decode('utf_8').encode('utf_8'),
                 chembl_id=assay_chembl_id, sourcedb_name=EXTDB_CHEMBL)
     drug_file.close()
+
+def cleanup_specificity():
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''DELETE FROM Specificity''')
+    conn.commit()
+    conn.close()
+
+def calculate_specificity():
+    UBIQUITY_PARAM = 0.3
+    expr_table = {}
+    ubiquity_table = {}
+    specificity_table = {}
+    all_upac_list = []
+    all_tissue_name_list = []
+    upac_record_list = get_all_protein_uniprots()
+    for upac_record in upac_record_list:
+        upac = upac_record[0]
+        all_upac_list.append(upac)
+    tissue_name_record_list = get_all_tissue_names()
+    for tissue_name_record in tissue_name_record_list:
+        tissue_name = tissue_name_record[0]
+        all_tissue_name_list.append(tissue_name)
+    for tissue_name in all_tissue_name_list:
+        for upac in all_upac_list:
+            expr_level_qual_record_list = get_expr_level_quals(upac, tissue_name)
+            expr_level_qual_list = []
+            for expr_level_qual_record in expr_level_qual_record_list:
+                expr_level_qual = expr_level_qual_record[0]
+                expr_level_qual_list.append(expr_level_qual)
+            if len(expr_level_qual_list) != 0:
+                if 'High' in expr_level_qual_list:
+                    expr_level_qual = 'High'
+                elif 'Medium' in expr_level_qual_list:
+                    expr_level_qual = 'Medium'
+                elif 'Low' in expr_level_qual_list:
+                    expr_level_qual = 'Low'
+                else:
+                    expr_level_qual = 'Not detected'
+                expr_table[(tissue_name, upac)] = expr_level_qual
+        #print 'Checked %s' % (tissue_name,)
+    for upac in all_upac_list:
+        ubiquity_score = 0
+        for tissue_name in all_tissue_name_list:
+            if (tissue_name, upac) in expr_table:
+                expr_level_qual = expr_table[(tissue_name, upac)]
+                if expr_level_qual in ['High', 'Medium']:
+                    ubiquity_score += 1
+        ubiquity_table[upac] = ubiquity_score
+    ubiquity_threshold = round(UBIQUITY_PARAM * len(all_tissue_name_list))
+    for upac in all_upac_list:
+        ubiquity_score = ubiquity_table[upac]
+        for tissue_name in all_tissue_name_list:
+            if (tissue_name, upac) in expr_table:
+                expr_level_qual = expr_table[(tissue_name, upac)]
+                if expr_level_qual == 'High' and ubiquity_score <= ubiquity_threhold:
+                    specificity_score = '1'
+                else:
+                    specificity_score = '0'
+                specificity_table[(tissue_name, upac)] = specificity_score
+                add_specificity(tissue_name, upac, specificity_score)
+        #print 'Added %s' % (upac,)
 
 
 # Deprecated or not implemented
