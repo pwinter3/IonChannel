@@ -14,6 +14,7 @@ DATASET_BIOGPS = 'U133AGNF1B'
 DATASET_HPA = 'hpa'
 ASSAY_MICROARRAY = 'microarray'
 ASSAY_RNASEQ = 'RNA-seq'
+ASSAY_IMMUNO = 'immuno'
 EXTDB_BIOGPS = 'biogps'
 EXTDB_BRENDA = 'brenda'
 EXTDB_CHANNELPEDIA = 'channelpedia'
@@ -467,7 +468,7 @@ def add_expression(tissue_name, upac, expr_level, expr_level_qual='', expr_units
     curs = conn.cursor()
     curs.execute('''INSERT INTO Expression (TissueName, ProteinUniProtAccNum,
         ExprLevel, ExprLevelQual, ExprUnits, AssayType, DatasetName, SourceDBName)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)''', (tissue_name, upac, expr_level, expr_level,
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)''', (tissue_name, upac, expr_level, expr_level_qual,
         expr_units, assay_type, dataset_name, sourcedb_name))
     conn.commit()
     conn.close()
@@ -858,6 +859,8 @@ def print_db_stats():
 #        print '%s' % (gs,)
 
 
+
+
 # DB management functions
 
 def cleanup_externaldb():
@@ -1142,7 +1145,7 @@ def read_hpa_map():
 #                            sourcedb_name=EXTDB_HPA)
 #    hpa_file.close()
 
-def process_hpa_data():
+def process_hpa_rna_data():
     hpa_file = open(PATH_HPA_RNA_TISSUE)
     hpa_file.next()
     for line in hpa_file:
@@ -1183,13 +1186,15 @@ def process_hpa_cancer_data():
                          data_is_okay = True
                     except:
                         pass
+
                     if data_is_okay:
+                        
                         patient_count_max = max(patient_counts)
                         patient_count_max_idx = [idx for idx, value in enumerate(patient_counts) if value==patient_count_max][-1]
                         expr_value_qual = expr_qual_choices[patient_count_max_idx]
                         add_expression(tissue_bto, upac, expr_value,
                             expr_level_qual=expr_value_qual,
-                            assay_type=ASSAY_RNASEQ, dataset_name=DATASET_HPA,
+                            assay_type=ASSAY_IMMUNO, dataset_name=DATASET_HPA,
                             sourcedb_name=EXTDB_HPA)
     hpa_file.close()
 
@@ -1201,17 +1206,18 @@ def process_hpa_normal_data():
         if len(row) >= 6:
             gene_symbol = row[1]
             upac_record_list = get_uniprots_by_gene_symbol(gene_symbol)
-            if len(upac_record_list) != 0:
+            if len(upac_record_list) == 6:
                 for upac_record in upac_record_list:
                     upac = upac_record[0]
                     tissue_name = row[2]
                     tissue_bto = get_bto_tissue_in_dbtissue(EXTDB_HPA, tissue_name)
                     expr_value = 0.0
                     expr_value_qual = row[4]
-                    add_expression(tissue_bto, upac, expr_value,
-                        expr_level_qual=expr_value_qual,
-                        assay_type=ASSAY_RNASEQ, dataset_name=DATASET_HPA,
-                        sourcedb_name=EXTDB_HPA)
+                    if expr_value_qual in ['Not detected', 'Low', 'Medium', 'High']:
+                        add_expression(tissue_bto, upac, expr_value,
+                            expr_level_qual=expr_value_qual,
+                            assay_type=ASSAY_IMMUNO, dataset_name=DATASET_HPA,
+                            sourcedb_name=EXTDB_HPA)
     hpa_file.close()
 
 
@@ -1363,6 +1369,16 @@ def calculate_specificity():
                 add_specificity(tissue_name, upac, specificity_score)
         #print 'Added %s' % (upac,)
 
+def check_db():
+    upac = 'Q16558'
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''SELECT Id, TissueName, ProteinUniProtAccNum, ExprLevel, ExprLevelQual,
+        ExprUnits, AssayType, DatasetName, SourceDBName
+        FROM Expression WHERE ProteinUniProtAccNum=?''', (upac,))
+    resultset = curs.fetchall()
+    for result in resultset:
+        print result
 
 # Deprecated or not implemented
 
