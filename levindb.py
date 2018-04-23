@@ -1094,7 +1094,7 @@ def setup_ion_channels():
     prot_reader.next()
     for row in prot_reader:
         protein_name = row[2]
-        process_function = ''
+        process_function = row[3]
         upac = row[0]
         if upac == '':
             continue
