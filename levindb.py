@@ -96,6 +96,12 @@ def create_tables():
         ChemblId TEXT NOT NULL);
         ''')
     curs.execute('''
+        CREATE TABLE GoTerm(
+        Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+        UniProtAccNum TEXT NOT NULL,
+        GoId TEXT NOT NULL);
+        ''')
+    curs.execute('''
         CREATE TABLE PDB(
         Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
         UniProtAccNum TEXT NOT NULL,
@@ -960,6 +966,27 @@ def add_specificity(tissue_name, upac, specificity_score):
     conn.commit()
     conn.close()
 
+# Routines for GoTerm table
+
+    curs.execute('''
+        CREATE TABLE GoTerm(
+        Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+        UniProtAccNum TEXT NOT NULL,
+        GoId TEXT NOT NULL);
+        ''')
+
+def add_go_term(upac, goid):
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''
+        INSERT INTO GoTerm
+        (UniProtAccNum, GoId)
+        VALUES (?, ?)
+        ''', (upac, goid))
+    conn.commit()
+    conn.close()
+
+
 # Routines for multiple tables
 
 def dump_database():
@@ -1451,6 +1478,28 @@ def input_chembl_drugs():
                 assay_type=assay_standard_type.decode('utf_8').encode('utf_8'),
                 chembl_id=assay_chembl_id, sourcedb_name=EXTDB_CHEMBL)
     drug_file.close()
+
+def cleanup_go_terms():
+    conn = sqlite3.connect(PATH_DB)
+    curs = conn.cursor()
+    curs.execute('''
+        DELETE FROM GoTerm
+        ''')
+    conn.commit()
+    conn.close()
+
+def setup_go_terms():
+    go_file = open(PATH_GO_QUICKGO)
+    go_reader = csv.reader(go_file, delimiter='\t')
+    go_reader.next()
+    for row in go_reader:
+        db = row[0]
+        if db == 'UniProtKB':
+            upac = row[1]
+            goid = row[4]
+            if exists_protein(upac):
+                add_go_term(upac, goid)
+    go_file.close()
 
 def cleanup_specificity():
     conn = sqlite3.connect(PATH_DB)
