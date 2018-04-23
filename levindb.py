@@ -968,13 +968,6 @@ def add_specificity(tissue_name, upac, specificity_score):
 
 # Routines for GoTerm table
 
-    curs.execute('''
-        CREATE TABLE GoTerm(
-        Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-        UniProtAccNum TEXT NOT NULL,
-        GoId TEXT NOT NULL);
-        ''')
-
 def add_go_term(upac, goid):
     conn = sqlite3.connect(PATH_DB)
     curs = conn.cursor()
