@@ -1,1 +1,1 @@
-# A database for gene expression on protein/compound interactions.
+# An ion channel database. For info contact <pwinter@ualberta.ca>.

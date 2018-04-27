@@ -5,17 +5,17 @@ import sqlite3
 class IonChannelDatabase(object):
 
     def __init__(self, path_db):
-        self.path_db = path_db
-        self.conn = sqlite3.connect(path_db)
+        self._path_db = path_db
+        self._conn = sqlite3.connect(path_db)
 
-    def get_conn(self):
-        return self.conn
+    def _get_conn(self):
+        return self._conn
 
 
     # Routines for ChannelSuperClass table
 
     def create_channel_super_class_table(self):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             DROP TABLE IF EXISTS ChannelSuperClass
@@ -27,7 +27,7 @@ class IonChannelDatabase(object):
         conn.commit()
 
     def add_channel_super_class(self, name):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             INSERT INTO ChannelSuperClass(Name)
@@ -36,7 +36,7 @@ class IonChannelDatabase(object):
         conn.commit()
 
     def exists_channel_super_class(self, name):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             SELECT EXISTS(
@@ -46,14 +46,11 @@ class IonChannelDatabase(object):
                 LIMIT 1)
             """, (name,))
         row = curs.fetchone()
-        if row[0] == 1:
-            result = True
-        else:
-            result = False
+        result = bool(row[0] == 1)
         return result
 
     def delete_channel_super_classes(self):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             DELETE FROM ChannelSuperClass
@@ -64,7 +61,7 @@ class IonChannelDatabase(object):
     # Routines for ChannelClass table
 
     def create_channel_class_table(self):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             DROP TABLE IF EXISTS ChannelClass
@@ -77,7 +74,7 @@ class IonChannelDatabase(object):
         conn.commit()
 
     def add_channel_class(self, name, super_class=''):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             INSERT INTO ChannelClass(Name, SuperClass)
@@ -86,7 +83,7 @@ class IonChannelDatabase(object):
         conn.commit()
 
     def exists_channel_class(self, name):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             SELECT EXISTS(
@@ -96,14 +93,11 @@ class IonChannelDatabase(object):
                 LIMIT 1)
             """, (name,))
         row = curs.fetchone()
-        if row[0] == 1:
-            result = True
-        else:
-            result = False
+        result = bool(row[0] == 1)
         return result
 
     def delete_channel_classes(self):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             DELETE FROM ChannelClass
@@ -114,7 +108,7 @@ class IonChannelDatabase(object):
     # Routines for ChannelSubClass table
 
     def create_channel_sub_class_table(self):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             DROP TABLE IF EXISTS ChannelSubClass
@@ -131,7 +125,7 @@ class IonChannelDatabase(object):
     def add_channel_sub_class(
             self, name, channel_class='', channelpedia_text='',
             channelpedia_url=''):
-        conn = self.get_conn()
+        conn = self._get_conn()
         conn.text_factory = str
         curs = conn.cursor()
         curs.execute("""
@@ -142,9 +136,8 @@ class IonChannelDatabase(object):
         conn.commit()
 
     def exists_channel_sub_class(self, name):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
-        expr_list = []
         curs.execute("""
             SELECT EXISTS(
                 SELECT 1
@@ -153,14 +146,11 @@ class IonChannelDatabase(object):
                 LIMIT 1)
             """, (name,))
         row = curs.fetchone()
-        if row[0] == 1:
-            result = True
-        else:
-            result = False
+        result = bool(row[0] == 1)
         return result
 
     def delete_channel_sub_classes(self):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             DELETE FROM ChannelSubClass
@@ -171,7 +161,7 @@ class IonChannelDatabase(object):
     # Routines for ExternalDB table
 
     def create_external_db_table(self):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             DROP TABLE IF EXISTS ExternalDB
@@ -184,7 +174,7 @@ class IonChannelDatabase(object):
         conn.commit()
 
     def add_external_db(self, name, url=''):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             INSERT INTO ExternalDB(Name, URL)
@@ -193,7 +183,7 @@ class IonChannelDatabase(object):
         conn.commit()
 
     def delete_external_dbs(self):
-        conn = sqlite3.connect(PATH_DB)
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             DELETE FROM ExternalDB
@@ -204,7 +194,7 @@ class IonChannelDatabase(object):
     # Routines for Tissue table
 
     def create_tissue_table(self):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             DROP TABLE IF EXISTS Tissue
@@ -218,7 +208,7 @@ class IonChannelDatabase(object):
         conn.commit()
 
     def add_tissue(self, name, bto_id='', parent_tissue_name=''):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             INSERT INTO Tissue(Name, BTOId, ParentTissueName)
@@ -227,25 +217,18 @@ class IonChannelDatabase(object):
         conn.commit()
 
     def get_tissue_names(self):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             SELECT Name
             FROM Tissue
             """)
         resultset = curs.fetchall()
-        conn = self.get_conn()
+        conn = self._get_conn()
         return resultset
 
-    def dump_tissue_table(self):
-        conn = self.get_conn()
-        curs = conn.cursor()
-        with codecs.open('tissue_dump.sql', 'w', 'utf-8') as f:
-            for line in conn.iterdump():
-                f.write('%s\n' % line)
-
     def delete_tissues(self):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             DELETE FROM Tissue
@@ -256,7 +239,7 @@ class IonChannelDatabase(object):
     # Routines for Protein table
 
     def create_protein_table(self):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             DROP TABLE IF EXISTS Protein
@@ -280,29 +263,31 @@ class IonChannelDatabase(object):
             self, upac, gene_symbol='', name='', process_function='', ions='',
             gating='', in_betse='', ion_channel_class_desc='',
             ion_channel_sub_class='', chembl_id=''):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             INSERT INTO Protein(
                 UniProtAccNum, GeneSymbol, Name, ProcessFunction, Ions, Gating,
                 InBETSE, IonChannelClassDesc, IonChannelSubClass, ChemblId)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (upac, gene_symbol, name, process_function, ions, gating,
-            in_betse, ion_channel_class_desc, ion_channel_sub_class, chembl_id))
+            """, (
+                upac, gene_symbol, name, process_function, ions, gating,
+                in_betse, ion_channel_class_desc, ion_channel_sub_class,
+                chembl_id))
         conn.commit()
 
-    def update_protein_sub_class(self, upac, sub_class):
-        conn = self.get_conn()
+    def update_protein_sub_class(self, upac, ion_channel_sub_class):
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             UPDATE Protein
             SET IonChannelSubClass = ?
             WHERE UniProtAccNum = ?
-            """, (sub_class, upac))
+            """, (ion_channel_sub_class, upac))
         conn.commit()
 
     def update_protein_name(self, upac, name):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             UPDATE Protein
@@ -312,7 +297,7 @@ class IonChannelDatabase(object):
         conn.commit()
 
     def update_protein_chembl_id(self, upac, chembl_id):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             UPDATE Protein
@@ -322,7 +307,7 @@ class IonChannelDatabase(object):
         conn.commit()
 
     def update_protein_gene_symbol(self, upac, gene_symbol):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             UPDATE Protein
@@ -332,7 +317,7 @@ class IonChannelDatabase(object):
         conn.commit()
 
     def update_protein_process_function(self, upac, process_function):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             UPDATE Protein
@@ -342,7 +327,7 @@ class IonChannelDatabase(object):
         conn.commit()
 
     def update_protein_ions(self, upac, ions):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             UPDATE Protein
@@ -352,7 +337,7 @@ class IonChannelDatabase(object):
         conn.commit()
 
     def update_protein_gating(self, upac, gating):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             UPDATE Protein SET Gating = ?
@@ -361,7 +346,7 @@ class IonChannelDatabase(object):
         conn.commit()
 
     def update_protein_in_betse(self, upac, in_betse):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             UPDATE Protein
@@ -370,9 +355,9 @@ class IonChannelDatabase(object):
             """, (in_betse, upac))
         conn.commit()
 
-    def update_protein_ion_channel_class_desc(self, upac,
-            ion_channel_class_desc):
-        conn = self.get_conn()
+    def update_protein_ion_channel_class_desc(
+            self, upac, ion_channel_class_desc):
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             UPDATE Protein
@@ -383,7 +368,7 @@ class IonChannelDatabase(object):
 
     def update_protein_ion_channel_sub_class(
             self, upac, ion_channel_sub_class):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             UPDATE Protein
@@ -393,7 +378,7 @@ class IonChannelDatabase(object):
         conn.commit()
 
     def exists_protein(self, upac):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             SELECT EXISTS(
@@ -403,14 +388,11 @@ class IonChannelDatabase(object):
                 LIMIT 1)
             """, (upac,))
         row = curs.fetchone()
-        if row[0] == 1:
-            result = True
-        else:
-            result = False
+        result = bool(row[0] == 1)
         return result
 
     def lookup_protein(self, upac):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             SELECT UniProtAccNum, GeneSymbol, Name, ProcessFunction, Ions,
@@ -420,14 +402,14 @@ class IonChannelDatabase(object):
             WHERE UniProtAccNum = ?
             """, (upac,))
         resultset = curs.fetchone()
-        if resultset == None:
-            result = ['','','','','','','','','','']
+        if resultset is None:
+            result = ['', '', '', '', '', '', '', '', '', '']
         else:
             result = resultset
         return result
 
     def get_uniprot_accnums_by_gene_symbol(self, gene_symbol):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             SELECT UniProtAccNum
@@ -435,14 +417,14 @@ class IonChannelDatabase(object):
             WHERE GeneSymbol = ?
             """, (gene_symbol,))
         resultset = curs.fetchall()
-        if resultset == None:
+        if resultset is None:
             result = []
         else:
             result = resultset
-        return resultset
+        return result
 
     def get_gene_symbols_by_uniprot_accnum(self, upac):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             SELECT GeneSymbol
@@ -450,14 +432,14 @@ class IonChannelDatabase(object):
             WHERE UniProtAccNum = ?
             """, (upac,))
         resultset = curs.fetchone()
-        if resultset == None:
+        if resultset is None:
             result = ''
         else:
             result = resultset[0]
         return result
 
     def is_in_betse(self, upac):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             SELECT InBETSE
@@ -465,17 +447,14 @@ class IonChannelDatabase(object):
             WHERE UniProtAccNum = ?
             """, (upac,))
         resultset = curs.fetchone()
-        if resultset == None:
+        if resultset is None:
             result = False
         else:
-            if resultset[0] == 'Y':
-                result = True
-            else:
-                result = False
+            result = bool(resultset[0] == 'Y')
         return result
 
     def get_protein_uniprot_accnums(self):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             SELECT UniProtAccNum
@@ -484,15 +463,8 @@ class IonChannelDatabase(object):
         resultset = curs.fetchall()
         return resultset
 
-    def dump_protein_table(self):
-        conn = self.get_conn()
-        curs = conn.cursor()
-        with codecs.open('protein_dump.sql', 'w', 'utf-8') as f:
-            for line in conn.iterdump():
-                f.write('%s\n' % line)
-
     def delete_proteins(self):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             DELETE FROM Protein
@@ -503,7 +475,7 @@ class IonChannelDatabase(object):
     # Routines for Expression table
 
     def create_expression_table(self):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             DROP TABLE IF EXISTS Expression
@@ -523,9 +495,9 @@ class IonChannelDatabase(object):
         conn.commit()
 
     def add_expression(
-            self, tissue_name, upac, expr_level, expr_level_qual='',
-            expr_units='', assay_type='', dataset_name='', sourcedb_name=''):
-        conn = self.get_conn()
+            self, tissue_name, upac, expr_level=0., expr_level_qual='',
+            expr_units='', assay_type='', dataset_name='', source_db_name=''):
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             INSERT INTO Expression (
@@ -534,11 +506,11 @@ class IonChannelDatabase(object):
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 tissue_name, upac, expr_level, expr_level_qual, expr_units,
-                assay_type, dataset_name, sourcedb_name))
+                assay_type, dataset_name, source_db_name))
         conn.commit()
 
     def exists_expression(self, upac):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             SELECT EXISTS(
@@ -548,30 +520,27 @@ class IonChannelDatabase(object):
                 LIMIT 1)
             """, (upac,))
         row = curs.fetchone()
-        if row[0] == 1:
-            result = True
-        else:
-            result = False
+        result = bool(row[0] == 1)
         return result
 
-    def lookup_expression(self, id):
-        conn = self.get_conn()
+    def lookup_expression(self, expression_id):
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             SELECT Id, TissueName, ProteinUniProtAccNum, ExprLevel,
                 ExprLevelQual, ExprUnits, AssayType, DatasetName, SourceDBName
             FROM Expression
             WHERE Id = ?
-            """, (id,))
+            """, (expression_id,))
         resultset = curs.fetchone()
-        if resultset == None:
-            result = ['', '', '', 0.0, '', '', '', '', '']
+        if resultset is None:
+            result = ['', '', '', 0., '', '', '', '', '']
         else:
             result = resultset
         return result
-    
+
     def get_expression_ids_by_uniprot_accnum(self, upac):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             SELECT Id
@@ -582,8 +551,8 @@ class IonChannelDatabase(object):
         return resultset
 
     def get_expression_level_by_uniprot_accnum_tissue_dataset(
-            self, upac, tissue, dataset):
-        conn = self.get_conn()
+            self, upac, tissue_name, dataset_name):
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             SELECT ExprLevel
@@ -591,13 +560,12 @@ class IonChannelDatabase(object):
             WHERE ProteinUniProtAccNum = ?
                 AND TissueName = ?
                 AND DatasetName = ?
-            """,
-            (upac, tissue, dataset))
+            """, (upac, tissue_name, dataset_name))
         resultset = curs.fetchall()
         return resultset
 
     def delete_expressions(self):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             DELETE FROM Expression
@@ -608,7 +576,7 @@ class IonChannelDatabase(object):
     # Routines for DBGene table
 
     def create_db_gene_table(self):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             DROP TABLE IF EXISTS DBGene
@@ -622,20 +590,20 @@ class IonChannelDatabase(object):
             """)
         conn.commit()
 
-    def add_db_gene(self, externaldb_name, gbac, probe_id):
-        conn = self.get_conn()
+    def add_db_gene(self, external_db_name, gbac, probe_id):
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             INSERT INTO DBGene(ExternalDBName, GenbankAccNum, ProbeID)
             VALUES (?, ?, ?)
-            """, (externaldb_name, gbac, probe_id))
+            """, (external_db_name, gbac, probe_id))
         conn.commit()
 
 
     # Routines for GenbankUniprot table
 
     def create_genbank_uniprot_table(self):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             DROP TABLE IF EXISTS GenbankUniprot
@@ -649,7 +617,7 @@ class IonChannelDatabase(object):
         conn.commit()
 
     def add_genbank_uniprot(self, gbac, upac):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             INSERT INTO GenbankUniprot(GenbankAccNum, UniProtAccNum)
@@ -658,7 +626,7 @@ class IonChannelDatabase(object):
         conn.commit()
 
     def exists_genbank_uniprot(self, gbac, upac):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             SELECT EXISTS(
@@ -669,14 +637,11 @@ class IonChannelDatabase(object):
                 LIMIT 1)
             """, (gbac, upac))
         row = curs.fetchone()
-        if row[0] == 1:
-            result = True
-        else:
-            result = False
+        result = bool(row[0] == 1)
         return result
 
     def delete_genbank_uniprots(self):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             DELETE FROM GenbankUniprot
@@ -687,7 +652,7 @@ class IonChannelDatabase(object):
     # Routines for Compound table
 
     def create_compound_table(self):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             DROP TABLE IF EXISTS Compound
@@ -708,8 +673,8 @@ class IonChannelDatabase(object):
 
     def add_compound(
             self, name, smiles='', inchi='', chembl_id='', synonyms='',
-            approval_status='', first_approval_year='', sourcedb_name=''):
-        conn = self.get_conn()
+            approval_status='', first_approval_year='', source_db_name=''):
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             INSERT INTO Compound(
@@ -718,13 +683,12 @@ class IonChannelDatabase(object):
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 smiles, inchi, name, chembl_id, synonyms, approval_status,
-                first_approval_year, sourcedb_name))
+                first_approval_year, source_db_name))
         conn.commit()
 
     def exists_compound_by_chembl_id(self, chembl_id):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
-        expr_list = []
         curs.execute("""
             SELECT EXISTS(
                 SELECT 1
@@ -733,30 +697,27 @@ class IonChannelDatabase(object):
                 LIMIT 1)
             """, (chembl_id,))
         row = curs.fetchone()
-        if row[0] == 1:
-            result = True
-        else:
-            result = False
+        result = bool(row[0] == 1)
         return result
 
-    def lookup_compound(self, id):
-        conn = self.get_conn()
+    def lookup_compound(self, compound_id):
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             SELECT Id, SMILES, InChI, Name, ChemblId, Synonyms, ApprovalStatus,
                 FirstApprovalYear, SourceDBName
             FROM Compound
             WHERE Id = ?
-            """, (id,))
+            """, (compound_id,))
         resultset = curs.fetchone()
-        if resultset == None:
+        if resultset is None:
             result = ['', '', '', '', '', '', '', '', '']
         else:
             result = resultset
         return result
 
     def get_compound_id_by_chembl_id(self, chembl_id):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             SELECT Id
@@ -764,14 +725,14 @@ class IonChannelDatabase(object):
             WHERE ChemblId = ?
             """, (chembl_id,))
         resultset = curs.fetchone()
-        if resultset == None:
+        if resultset is None:
             result = ''
         else:
             result = resultset[0]
         return result
 
     def get_compound_id_by_compound_name(self, compound_name):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             SELECT Id
@@ -779,14 +740,14 @@ class IonChannelDatabase(object):
             WHERE Name = ?
             """, (compound_name,))
         resultset = curs.fetchone()
-        if resultset == None:
+        if resultset is None:
             result = ''
         else:
             result = resultset[0]
         return result
 
     def delete_compounds(self):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             DELETE FROM Compound
@@ -797,7 +758,7 @@ class IonChannelDatabase(object):
     # Routines for Interaction table
 
     def create_interaction_table(self):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             DROP TABLE IF EXISTS Interaction
@@ -820,8 +781,8 @@ class IonChannelDatabase(object):
     def add_interaction(
             self, target_upac, compound_id, action_type='', action_desc='',
             strength=0, strength_units='', assay_type='', chembl_id='',
-            sourcedb_name=''):
-        conn = self.get_conn()
+            source_db_name=''):
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             INSERT INTO Interaction(
@@ -830,11 +791,11 @@ class IonChannelDatabase(object):
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 target_upac, compound_id, action_type, action_desc, strength,
-                strength_units, assay_type, chembl_id, sourcedb_name))
+                strength_units, assay_type, chembl_id, source_db_name))
         conn.commit()
 
     def exists_interaction_uniprot_accnum_compound_id(self, upac, compound_id):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             SELECT EXISTS(
@@ -845,14 +806,11 @@ class IonChannelDatabase(object):
                 LIMIT 1)
             """, (upac, compound_id))
         row = curs.fetchone()
-        if row[0] == 1:
-            result = True
-        else:
-            result = False
+        result = bool(row[0] == 1)
         return result
 
     def exists_interaction_by_uniprot_accnum(self, upac):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             SELECT EXISTS(
@@ -862,14 +820,11 @@ class IonChannelDatabase(object):
                 LIMIT 1)
             """, (upac,))
         row = curs.fetchone()
-        if row[0] == 1:
-            result = True
-        else:
-            result = False
+        result = bool(row[0] == 1)
         return result
 
     def get_interaction_ids_by_uniprot_accnum(self, upac):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             SELECT Id
@@ -879,24 +834,24 @@ class IonChannelDatabase(object):
         resultset = curs.fetchall()
         return resultset
 
-    def lookup_interaction(self, id):
-        conn = self.get_conn()
+    def lookup_interaction(self, interaction_id):
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             SELECT Id, TargetUniProtAccNum, CompoundId, ActionType, ActionDesc,
                 Strength, StrengthUnits, AssayType, ChemblId, SourceDBName
             FROM Interaction
             WHERE Id = ?
-            """, (id,))
+            """, (interaction_id,))
         resultset = curs.fetchone()
-        if resultset == None:
+        if resultset is None:
             result = ['', '', '', '', '', '', '', '', '', '']
         else:
             result = resultset[0]
-        return resultset
+        return result
 
     def delete_interactions(self):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             DELETE FROM Interaction
@@ -907,7 +862,7 @@ class IonChannelDatabase(object):
     # Routines for DBTissue table
 
     def create_db_tissue_table(self):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             DROP TABLE IF EXISTS DBTissue
@@ -922,35 +877,35 @@ class IonChannelDatabase(object):
         conn.commit()
 
     def add_db_tissue(
-            self, externaldb_name, tissue_name, db_equivalent_tissue_name):
-        conn = self.get_conn()
+            self, external_db_name, tissue_name, db_equivalent_tissue_name):
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             INSERT INTO DBTissue(
                 ExternalDBName, TissueName, DBEquivalentTissueName)
             VALUES (?, ?, ?)
-            """, (externaldb_name, tissue_name, db_equivalent_tissue_name))
+            """, (external_db_name, tissue_name, db_equivalent_tissue_name))
         conn.commit()
-    
+
     def get_tissue_name_by_db_tissue_name(
-            self, externaldb_name, db_equivalent_tissue_name):
-        conn = self.get_conn()
+            self, external_db_name, db_equivalent_tissue_name):
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             SELECT TissueName
             FROM DBTissue
             WHERE ExternalDBName=?
                 AND DBEquivalentTissueName=?
-            """, (externaldb_name, db_equivalent_tissue_name))
+            """, (external_db_name, db_equivalent_tissue_name))
         resultset = curs.fetchone()
-        if resultset == None:
+        if resultset is None:
             result = ''
         else:
             result = resultset[0]
         return result
 
     def delete_db_tissues(self):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             DELETE FROM DBTissue
@@ -961,7 +916,7 @@ class IonChannelDatabase(object):
     # Routines for Specificity table
 
     def create_specificity_table(self):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             DROP TABLE IF EXISTS Specificity
@@ -976,7 +931,7 @@ class IonChannelDatabase(object):
         conn.commit()
 
     def add_specificity(self, tissue_name, upac, specificity_score):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             INSERT INTO Specificity(
@@ -986,7 +941,7 @@ class IonChannelDatabase(object):
         conn.commit()
 
     def delete_specificities(self):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             DELETE FROM Specificity
@@ -997,7 +952,7 @@ class IonChannelDatabase(object):
     # Routines for GoTerm table
 
     def create_go_term_table(self):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             DROP TABLE IF EXISTS GoTerm
@@ -1011,7 +966,7 @@ class IonChannelDatabase(object):
         conn.commit()
 
     def add_go_term(self, upac, goid):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             INSERT INTO GoTerm(UniProtAccNum, GoId)
@@ -1020,7 +975,7 @@ class IonChannelDatabase(object):
         conn.commit()
 
     def delete_go_terms(self):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             DELETE FROM GoTerm
@@ -1029,9 +984,9 @@ class IonChannelDatabase(object):
 
 
     # Routines for PDB table
-    
+
     def create_pdb_table(self):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             DROP TABLE IF EXISTS PDB
@@ -1049,7 +1004,7 @@ class IonChannelDatabase(object):
     # Other database routines
 
     def vacuum_db(self):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             VACUUM
@@ -1057,13 +1012,13 @@ class IonChannelDatabase(object):
         conn.commit()
 
     def dump_db(self):
-        conn = self.get_conn()
-        with codecs.open('icdb_dump.sql', 'w', 'utf-8') as f:
+        conn = self._get_conn()
+        with codecs.open('icdb_dump.sql', 'w', 'utf-8') as dump_file:
             for line in conn.iterdump():
-                f.write('%s\n' % line)
+                dump_file.write('%s\n' % line)
 
     def print_db_stats(self):
-        conn = self.get_conn()
+        conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             SELECT *
@@ -1089,14 +1044,14 @@ class IonChannelDatabase(object):
                 self.get_interaction_ids_by_uniprot_accnum(upac)
             expression_id_list = \
                 self.get_expression_ids_by_uniprot_accnum(upac)
-            if len(interaction_id_list) > 0 and len(expression_id_list) > 0:
+            if interaction_id_list and expression_id_list:
                 useful_data_count += 1
         print 'Protein with interaction and expression %d' % useful_data_count
         upac_record_list = self.get_protein_uniprot_accnums()
         in_betse_count = 0
         in_betse_with_expr_count = 0
-        list_in_betse_with_expr = []
-        list_in_betse_no_expr = []
+        in_betse_with_expr_list = []
+        in_betse_no_expr_list = []
         for upac_record in upac_record_list:
             upac = upac_record[0]
             protein_record = self.lookup_protein(upac)
@@ -1105,10 +1060,10 @@ class IonChannelDatabase(object):
                 in_betse_count += 1
                 if self.exists_expression(upac):
                     in_betse_with_expr_count += 1
-                    list_in_betse_with_expr.append(
+                    in_betse_with_expr_list.append(
                         self.get_gene_symbols_by_uniprot_accnum(upac))
                 else:
-                    list_in_betse_no_expr.append(
+                    in_betse_no_expr_list.append(
                         self.get_gene_symbols_by_uniprot_accnum(upac))
         print 'Number of proteins in betse = %d' % in_betse_count
         print '...also with with expression = %d' % in_betse_with_expr_count
