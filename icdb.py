@@ -10,6 +10,12 @@ class IonChannelDatabase(object):
 
     def _get_conn(self):
         return self._conn
+    
+    def begin_transaction(self):
+        self._conn.isolation_level = None
+    
+    def end_transaction(self):
+        self._conn.commit()
 
 
     # Routines for ChannelSuperClass table
@@ -46,8 +52,7 @@ class IonChannelDatabase(object):
                 LIMIT 1)
             """, (name,))
         row = curs.fetchone()
-        result = bool(row[0] == 1)
-        return result
+        return bool(row[0] == 1)
 
     def delete_channel_super_classes(self):
         conn = self._get_conn()
@@ -93,8 +98,7 @@ class IonChannelDatabase(object):
                 LIMIT 1)
             """, (name,))
         row = curs.fetchone()
-        result = bool(row[0] == 1)
-        return result
+        return bool(row[0] == 1)
 
     def delete_channel_classes(self):
         conn = self._get_conn()
@@ -146,8 +150,7 @@ class IonChannelDatabase(object):
                 LIMIT 1)
             """, (name,))
         row = curs.fetchone()
-        result = bool(row[0] == 1)
-        return result
+        return bool(row[0] == 1)
 
     def delete_channel_sub_classes(self):
         conn = self._get_conn()
@@ -223,9 +226,8 @@ class IonChannelDatabase(object):
             SELECT Name
             FROM Tissue
             """)
-        resultset = curs.fetchall()
-        conn = self._get_conn()
-        return resultset
+        row_list = curs.fetchall()
+        return [elem[0] for elem in row_list]
 
     def delete_tissues(self):
         conn = self._get_conn()
@@ -388,11 +390,11 @@ class IonChannelDatabase(object):
                 LIMIT 1)
             """, (upac,))
         row = curs.fetchone()
-        result = bool(row[0] == 1)
-        return result
+        return bool(row[0] == 1)
 
     def lookup_protein(self, upac):
         conn = self._get_conn()
+        conn.row_factory = sqlite3.Row
         curs = conn.cursor()
         curs.execute("""
             SELECT UniProtAccNum, GeneSymbol, Name, ProcessFunction, Ions,
@@ -401,12 +403,8 @@ class IonChannelDatabase(object):
             FROM Protein
             WHERE UniProtAccNum = ?
             """, (upac,))
-        resultset = curs.fetchone()
-        if resultset is None:
-            result = ['', '', '', '', '', '', '', '', '', '']
-        else:
-            result = resultset
-        return result
+        row = curs.fetchone()
+        return row
 
     def get_uniprot_accnums_by_gene_symbol(self, gene_symbol):
         conn = self._get_conn()
@@ -416,12 +414,8 @@ class IonChannelDatabase(object):
             FROM Protein
             WHERE GeneSymbol = ?
             """, (gene_symbol,))
-        resultset = curs.fetchall()
-        if resultset is None:
-            result = []
-        else:
-            result = resultset
-        return result
+        row_list = curs.fetchall()
+        return [elem[0] for elem in row_list]
 
     def get_gene_symbols_by_uniprot_accnum(self, upac):
         conn = self._get_conn()
@@ -431,12 +425,8 @@ class IonChannelDatabase(object):
             FROM Protein
             WHERE UniProtAccNum = ?
             """, (upac,))
-        resultset = curs.fetchone()
-        if resultset is None:
-            result = ''
-        else:
-            result = resultset[0]
-        return result
+        row_list = curs.fetchall()
+        return [elem[0] for elem in row_list]
 
     def is_in_betse(self, upac):
         conn = self._get_conn()
@@ -446,12 +436,8 @@ class IonChannelDatabase(object):
             FROM Protein
             WHERE UniProtAccNum = ?
             """, (upac,))
-        resultset = curs.fetchone()
-        if resultset is None:
-            result = False
-        else:
-            result = bool(resultset[0] == 'Y')
-        return result
+        row = curs.fetchone()
+        return bool(row[0] == 'Y')
 
     def get_protein_uniprot_accnums(self):
         conn = self._get_conn()
@@ -460,8 +446,8 @@ class IonChannelDatabase(object):
             SELECT UniProtAccNum
             FROM Protein
             """)
-        resultset = curs.fetchall()
-        return resultset
+        row_list = curs.fetchall()
+        return [elem[0] for elem in row_list]
 
     def delete_proteins(self):
         conn = self._get_conn()
@@ -520,11 +506,11 @@ class IonChannelDatabase(object):
                 LIMIT 1)
             """, (upac,))
         row = curs.fetchone()
-        result = bool(row[0] == 1)
-        return result
+        return bool(row[0] == 1)
 
     def lookup_expression(self, expression_id):
         conn = self._get_conn()
+        conn.row_factory = sqlite3.Row
         curs = conn.cursor()
         curs.execute("""
             SELECT Id, TissueName, ProteinUniProtAccNum, ExprLevel,
@@ -532,12 +518,8 @@ class IonChannelDatabase(object):
             FROM Expression
             WHERE Id = ?
             """, (expression_id,))
-        resultset = curs.fetchone()
-        if resultset is None:
-            result = ['', '', '', 0., '', '', '', '', '']
-        else:
-            result = resultset
-        return result
+        row = curs.fetchone()
+        return row
 
     def get_expression_ids_by_uniprot_accnum(self, upac):
         conn = self._get_conn()
@@ -547,8 +529,8 @@ class IonChannelDatabase(object):
             FROM Expression
             WHERE ProteinUniProtAccNum = ?
             """, (upac,))
-        resultset = curs.fetchall()
-        return resultset
+        row_list = curs.fetchall()
+        return [elem[0] for elem in row_list]
 
     def get_expression_level_by_uniprot_accnum_tissue_dataset(
             self, upac, tissue_name, dataset_name):
@@ -561,8 +543,8 @@ class IonChannelDatabase(object):
                 AND TissueName = ?
                 AND DatasetName = ?
             """, (upac, tissue_name, dataset_name))
-        resultset = curs.fetchall()
-        return resultset
+        row_list = curs.fetchall()
+        return [elem[0] for elem in row_list]
 
     def delete_expressions(self):
         conn = self._get_conn()
@@ -637,8 +619,7 @@ class IonChannelDatabase(object):
                 LIMIT 1)
             """, (gbac, upac))
         row = curs.fetchone()
-        result = bool(row[0] == 1)
-        return result
+        return bool(row[0] == 1)
 
     def delete_genbank_uniprots(self):
         conn = self._get_conn()
@@ -697,11 +678,11 @@ class IonChannelDatabase(object):
                 LIMIT 1)
             """, (chembl_id,))
         row = curs.fetchone()
-        result = bool(row[0] == 1)
-        return result
+        return bool(row[0] == 1)
 
     def lookup_compound(self, compound_id):
         conn = self._get_conn()
+        conn.row_factory = sqlite3.Row
         curs = conn.cursor()
         curs.execute("""
             SELECT Id, SMILES, InChI, Name, ChemblId, Synonyms, ApprovalStatus,
@@ -709,12 +690,8 @@ class IonChannelDatabase(object):
             FROM Compound
             WHERE Id = ?
             """, (compound_id,))
-        resultset = curs.fetchone()
-        if resultset is None:
-            result = ['', '', '', '', '', '', '', '', '']
-        else:
-            result = resultset
-        return result
+        row = curs.fetchone()
+        return row
 
     def get_compound_id_by_chembl_id(self, chembl_id):
         conn = self._get_conn()
@@ -724,14 +701,10 @@ class IonChannelDatabase(object):
             FROM Compound
             WHERE ChemblId = ?
             """, (chembl_id,))
-        resultset = curs.fetchone()
-        if resultset is None:
-            result = ''
-        else:
-            result = resultset[0]
-        return result
+        row = curs.fetchone()
+        return row[0]
 
-    def get_compound_id_by_compound_name(self, compound_name):
+    def get_compound_ids_by_compound_name(self, compound_name):
         conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
@@ -739,12 +712,8 @@ class IonChannelDatabase(object):
             FROM Compound
             WHERE Name = ?
             """, (compound_name,))
-        resultset = curs.fetchone()
-        if resultset is None:
-            result = ''
-        else:
-            result = resultset[0]
-        return result
+        row_list = curs.fetchall()
+        return [elem[0] for elem in row_list]
 
     def delete_compounds(self):
         conn = self._get_conn()
@@ -806,8 +775,7 @@ class IonChannelDatabase(object):
                 LIMIT 1)
             """, (upac, compound_id))
         row = curs.fetchone()
-        result = bool(row[0] == 1)
-        return result
+        return bool(row[0] == 1)
 
     def exists_interaction_by_uniprot_accnum(self, upac):
         conn = self._get_conn()
@@ -820,8 +788,7 @@ class IonChannelDatabase(object):
                 LIMIT 1)
             """, (upac,))
         row = curs.fetchone()
-        result = bool(row[0] == 1)
-        return result
+        return bool(row[0] == 1)
 
     def get_interaction_ids_by_uniprot_accnum(self, upac):
         conn = self._get_conn()
@@ -831,11 +798,12 @@ class IonChannelDatabase(object):
             FROM Interaction
             WHERE TargetUniProtAccNum = ?
             """, (upac,))
-        resultset = curs.fetchall()
-        return resultset
+        row_list = curs.fetchall()
+        return [elem[0] for elem in row_list]
 
     def lookup_interaction(self, interaction_id):
         conn = self._get_conn()
+        conn.row_factory = sqlite3.Row
         curs = conn.cursor()
         curs.execute("""
             SELECT Id, TargetUniProtAccNum, CompoundId, ActionType, ActionDesc,
@@ -843,12 +811,8 @@ class IonChannelDatabase(object):
             FROM Interaction
             WHERE Id = ?
             """, (interaction_id,))
-        resultset = curs.fetchone()
-        if resultset is None:
-            result = ['', '', '', '', '', '', '', '', '', '']
-        else:
-            result = resultset[0]
-        return result
+        row = curs.fetchone()
+        return row
 
     def delete_interactions(self):
         conn = self._get_conn()
@@ -872,7 +836,9 @@ class IonChannelDatabase(object):
                 Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                 ExternalDBName TEXT NOT NULL,
                 TissueName TEXT NOT NULL,
-                DBEquivalentTissueName TEXT NOT NULL)
+                DBEquivalentTissueName TEXT NOT NULL,
+                CONSTRAINT UniCon UNIQUE (
+                    ExternalDBName, DBEquivalentTissueName))
             """)
         conn.commit()
 
@@ -894,15 +860,15 @@ class IonChannelDatabase(object):
         curs.execute("""
             SELECT TissueName
             FROM DBTissue
-            WHERE ExternalDBName=?
-                AND DBEquivalentTissueName=?
+            WHERE ExternalDBName = ?
+                AND DBEquivalentTissueName = ?
             """, (external_db_name, db_equivalent_tissue_name))
-        resultset = curs.fetchone()
-        if resultset is None:
-            result = ''
+        row = curs.fetchone()
+        if row is not None:
+            tissue_name = row[0]
         else:
-            result = resultset[0]
-        return result
+            tissue_name = ''
+        return tissue_name
 
     def delete_db_tissues(self):
         conn = self._get_conn()
@@ -1037,33 +1003,34 @@ class IonChannelDatabase(object):
             row_count = curs.fetchone()[0]
             print table_name, row_count
         useful_data_count = 0
-        upac_record_list = self.get_protein_uniprot_accnums()
-        for upac_record in upac_record_list:
-            upac = upac_record[0]
+        upac_list = self.get_protein_uniprot_accnums()
+        for upac in upac_list:
             interaction_id_list = \
                 self.get_interaction_ids_by_uniprot_accnum(upac)
             expression_id_list = \
                 self.get_expression_ids_by_uniprot_accnum(upac)
             if interaction_id_list and expression_id_list:
                 useful_data_count += 1
-        print 'Protein with interaction and expression %d' % useful_data_count
-        upac_record_list = self.get_protein_uniprot_accnums()
+        print 'Number of proteins with interaction and expression = %d' \
+            % useful_data_count
+        upac_list = self.get_protein_uniprot_accnums()
         in_betse_count = 0
         in_betse_with_expr_count = 0
         in_betse_with_expr_list = []
         in_betse_no_expr_list = []
-        for upac_record in upac_record_list:
-            upac = upac_record[0]
+        for upac in upac_list:
             protein_record = self.lookup_protein(upac)
-            in_betse = protein_record[6]
-            if in_betse == 'Y':
-                in_betse_count += 1
-                if self.exists_expression(upac):
-                    in_betse_with_expr_count += 1
-                    in_betse_with_expr_list.append(
-                        self.get_gene_symbols_by_uniprot_accnum(upac))
-                else:
-                    in_betse_no_expr_list.append(
-                        self.get_gene_symbols_by_uniprot_accnum(upac))
+            if protein_record is not None:
+                in_betse = protein_record['InBETSE']
+                if in_betse == 'Y':
+                    in_betse_count += 1
+                    if self.exists_expression(upac):
+                        in_betse_with_expr_count += 1
+                        in_betse_with_expr_list.append(
+                            self.get_gene_symbols_by_uniprot_accnum(upac))
+                    else:
+                        in_betse_no_expr_list.append(
+                            self.get_gene_symbols_by_uniprot_accnum(upac))
         print 'Number of proteins in betse = %d' % in_betse_count
-        print '...also with with expression = %d' % in_betse_with_expr_count
+        print 'Number of proteins in betse with expression = %d' \
+            % in_betse_with_expr_count

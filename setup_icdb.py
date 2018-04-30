@@ -241,25 +241,29 @@ def input_ion_channel_data():
                         ions, gating, in_betse, ion_channel_subclass)
                 else:
                     old_protein_record = db.lookup_protein(upac)
-                    old_upac = old_protein_record[0]
-                    old_gene_symbol = old_protein_record[1]
-                    old_name = old_protein_record[2]
-                    old_process_function = old_protein_record[3]
-                    old_ions = old_protein_record[4]
-                    old_gating = old_protein_record[5]
-                    old_in_betse = old_protein_record[6]
-                    old_ion_channel_class_desc = old_protein_record[7]
-                    old_ion_channel_subclass = old_protein_record[8]
-                    old_chembl_id = old_protein_record[9]
-                    db.update_protein_gene_symbol(upac, gene_symbol)
-                    db.update_protein_name(upac, protein_name)
-                    db.update_protein_ions(upac, ions)
-                    db.update_protein_gating(upac, gating)
-                    if old_in_betse == '':
-                        db.update_protein_in_betse(upac, in_betse)
-                    db.update_protein_ion_channel_sub_class(
-                        upac, ion_channel_subclass)
-
+                    if old_protein_record is not None:
+                        old_upac = old_protein_record['UniProtAccNum']
+                        old_gene_symbol = old_protein_record['GeneSymbol']
+                        old_name = old_protein_record['Name']
+                        old_process_function = \
+                            old_protein_record['ProcessFunction']
+                        old_ions = old_protein_record['Ions']
+                        old_gating = old_protein_record['Gating']
+                        old_in_betse = old_protein_record['InBETSE']
+                        old_ion_channel_class_desc = \
+                            old_protein_record['IonChannelClassDesc']
+                        old_ion_channel_subclass = \
+                            old_protein_record['IonChannelSubClass']
+                        old_chembl_id = old_protein_record['ChemblId']
+                        db.update_protein_gene_symbol(upac, gene_symbol)
+                        db.update_protein_name(upac, protein_name)
+                        db.update_protein_ions(upac, ions)
+                        db.update_protein_gating(upac, gating)
+                        if old_in_betse == '':
+                            db.update_protein_in_betse(upac, in_betse)
+                        db.update_protein_ion_channel_sub_class(
+                            upac, ion_channel_subclass)
+                
 
 def setup_protein_compound_interaction_tables():
     db = icdb.IonChannelDatabase(PATH_DB)
@@ -294,21 +298,21 @@ def input_biogps_expression_data():
         for row in microarray_reader:
             probeset_id = row[0]
             if probeset_id in annot_dict:
-                gene_symbol = annot_dict[probeset_id]
-                upac_resultset = db.get_uniprot_accnums_by_gene_symbol(
-                    gene_symbol.strip())
-                if upac_resultset:
+                gene_symbol = annot_dict[probeset_id].strip()
+                upac_list = db.get_uniprot_accnums_by_gene_symbol(gene_symbol)
+                if upac_list:
                     for i in xrange(0, len(tissue_list)):
+                        tissue_name = tissue_list[i]
                         expr_level = float(row[i + 1])
-                        tissue_name = db.get_tissue_name_by_db_tissue_name(
-                            EXTDB_BIOGPS, tissue_list[i])
-                        for upac_result in upac_resultset:
-                            upac = upac_result[0]
-                            db.add_expression(
-                                tissue_name, upac, expr_level=expr_level,
-                                assay_type=ASSAY_MICROARRAY,
-                                dataset_name=DATASET_BIOGPS,
-                                source_db_name=EXTDB_BIOGPS)
+                        tissue_bto = db.get_tissue_name_by_db_tissue_name(
+                            EXTDB_BIOGPS, tissue_name)
+                        if tissue_bto != '':
+                            for upac in upac_list:
+                                db.add_expression(
+                                    tissue_bto, upac, expr_level=expr_level,
+                                    assay_type=ASSAY_MICROARRAY,
+                                    dataset_name=DATASET_BIOGPS,
+                                    source_db_name=EXTDB_BIOGPS)
 
 
 # Function is not used
@@ -332,16 +336,14 @@ def input_hpa_rna_expression_data():
             row = line.strip().split('\t')
             if len(row) >= 5 and row[0].strip() != '':
                 gene_symbol = row[1]
-                upac_record_list = db.get_uniprot_accnums_by_gene_symbol(
-                    gene_symbol)
-                if upac_record_list:
-                    for upac_record in upac_record_list:
-                        upac = upac_record[0]
-                        gene_name = row[1]
-                        tissue_name = row[2]
-                        expr_level = float(row[3])
-                        tissue_bto = db.get_tissue_name_by_db_tissue_name(
-                            EXTDB_HPA, tissue_name)
+                upac_list = db.get_uniprot_accnums_by_gene_symbol(gene_symbol)
+                for upac in upac_list:
+                    gene_name = row[1]
+                    tissue_name = row[2]
+                    expr_level = float(row[3])
+                    tissue_bto = db.get_tissue_name_by_db_tissue_name(
+                        EXTDB_HPA, tissue_name)
+                    if tissue_bto != '':
                         db.add_expression(
                             tissue_bto, upac, expr_level=expr_level,
                             assay_type=ASSAY_RNASEQ, dataset_name=DATASET_HPA,
@@ -358,13 +360,11 @@ def input_hpa_cancer_expression_data():
             if len(row) >= 6:
                 gene_symbol = row[1]
                 tissue_name = row[2]
-                upac_record_list = db.get_uniprot_accnums_by_gene_symbol(
-                    gene_symbol)
-                if upac_record_list:
-                    for upac_record in upac_record_list:
-                        upac = upac_record[0]
-                        tissue_bto = db.get_tissue_name_by_db_tissue_name(
-                            EXTDB_HPA, tissue_name)
+                upac_list = db.get_uniprot_accnums_by_gene_symbol(gene_symbol)
+                for upac in upac_list:
+                    tissue_bto = db.get_tissue_name_by_db_tissue_name(
+                        EXTDB_HPA, tissue_name)
+                    if tissue_bto != '':
                         expr_level = 0.
                         is_data_ok = False
                         try:
@@ -375,8 +375,8 @@ def input_hpa_cancer_expression_data():
                         if is_data_ok:
                             patient_count_max = max(patient_count_list)
                             patient_count_max_idx = [
-                                idx
-                                for idx, value in enumerate(patient_count_list)
+                                idx for idx, value
+                                in enumerate(patient_count_list)
                                 if value == patient_count_max][-1]
                             expr_level_qual = expr_qual_choices[
                                 patient_count_max_idx]
@@ -398,13 +398,11 @@ def input_hpa_normal_expression_data():
                 gene_symbol = row[1]
                 tissue_name = row[2]
                 expr_level_qual = row[4]
-                upac_record_list = db.get_uniprot_accnums_by_gene_symbol(
-                    gene_symbol)
-                if len(upac_record_list) == 6:
-                    for upac_record in upac_record_list:
-                        upac = upac_record[0]
-                        tissue_bto = db.get_tissue_name_by_db_tissue_name(
-                            EXTDB_HPA, tissue_name)
+                upac_list = db.get_uniprot_accnums_by_gene_symbol(gene_symbol)
+                for upac in upac_list:
+                    tissue_bto = db.get_tissue_name_by_db_tissue_name(
+                        EXTDB_HPA, tissue_name)
+                    if tissue_bto != '':
                         expr_level = 0.
                         if expr_level_qual in [
                                 EXPR_H, EXPR_M, EXPR_L, EXPR_ND]:
@@ -470,10 +468,8 @@ def setup_channel_class_tables():
                     channel_subclass, channel_class,
                     channelpedia_text=channelpedia_text,
                     channelpedia_url=channelpedia_url)
-            upac_record_list = db.get_uniprot_accnums_by_gene_symbol(
-                gene_symbol)
-            for upac_record in upac_record_list:
-                upac = upac_record[0]
+            upac_list = db.get_uniprot_accnums_by_gene_symbol(gene_symbol)
+            for upac in upac_list:
                 db.update_protein_sub_class(upac, channel_subclass)
 
 
@@ -494,34 +490,26 @@ def setup_go_term_table():
 def setup_specificity_table_with_jp_method():
     db = icdb.IonChannelDatabase(PATH_DB)
     db.create_specificity_table()
-    all_upac_list = []
-    upac_record_list = db.get_protein_uniprot_accnums()
-    for upac_record in upac_record_list:
-        upac = upac_record[0]
-        all_upac_list.append(upac)
-    tissue_name_record_list = db.get_tissue_names()
-    all_tissue_name_list = []
-    for tissue_name_record in tissue_name_record_list:
-        tissue_name = tissue_name_record[0]
-        all_tissue_name_list.append(tissue_name)
+    upac_list = db.get_protein_uniprot_accnums()
+    tissue_name_list = db.get_tissue_names()
     specificity_score_threshold = 5.
     specificity_score_dict = {}
     expr_table = {}
-    for upac in all_upac_list:
-        specificity_score = 0
+    for upac in upac_list:
+        specificity_score = 0.
         tissue_count = 0
-        for tissue_name in all_tissue_name_list:
-            expr_level_record_list = \
+        for tissue_name in tissue_name_list:
+            expr_level_list = \
                 db.get_expression_level_by_uniprot_accnum_tissue_dataset(
                     upac, tissue_name, EXTDB_HPA)
-            if expr_level_record_list:
-                expr_level_rna = expr_level_record_list[0][0]
+            if expr_level_list:
+                expr_level_rna = expr_level_list[0]
                 expr_table[(tissue_name, upac)] = expr_level_rna
                 if expr_level_rna > specificity_score_threshold:
-                    specificity_score += 1
+                    specificity_score += 1.
                 tissue_count += 1
         if tissue_count > 0:
-            specificity_score = 1 - specificity_score*1./tissue_count
+            specificity_score = 1. - specificity_score / float(tissue_count)
         else:
             specificity_score = None
         specificity_score_dict[upac] = specificity_score
