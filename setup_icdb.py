@@ -9,9 +9,29 @@ import icdb
 PATH_DB = 'ic.db'
 
 # Constants to be stored in the DB
-ASSAY_IMMUNO = 'immuno'
-ASSAY_MICROARRAY = 'microarray'
-ASSAY_RNASEQ = 'RNA-seq'
+ACTION_TYPE_ACTIVATOR = 'ACTIVATOR'
+ACTION_TYPE_AGONIST = 'AGONIST'
+ACTION_TYPE_ALLOSTERIC_ANTAGONIST = 'ALLOSTERIC ANTAGONIST'
+ACTION_TYPE_ANTAGONIST = 'ANTAGONIST'
+ACTION_TYPE_BLOCKER = 'BLOCKER'
+ACTION_TYPE_INHIBITOR = 'INHIBITOR'
+ACTION_TYPE_MODULATOR = 'MODULATOR'
+ACTION_TYPE_NEGATIVE_ALLOSTERIC_MODULATOR = 'NEGATIVE ALLOSTERIC MODULATOR'
+ACTION_TYPE_OPENER = 'OPENER'
+ACTION_TYPE_PARTIAL_AGONIST = 'PARTIAL AGONIST'
+ACTION_TYPE_POSITIVE_ALLOSTERIC_MODULATOR = 'POSITIVE ALLOSTERIC MODULATOR'
+ACTION_TYPE_POSITIVE_MODULATOR = 'POSITIVE MODULATOR'
+ACTION_TYPE_STABILISER = 'STABILISER'
+EXPR_ASSAY_IMMUNO = 'immuno'
+EXPR_ASSAY_MICROARRAY = 'microarray'
+EXPR_ASSAY_RNASEQ = 'RNA-seq'
+ASSAY_TYPE_ADMET = 'A'
+ASSAY_TYPE_BINDING = 'B'
+ASSAY_TYPE_FUNCTIONAL = 'F'
+ASSAY_TYPE_TOXICITY = 'T'
+ASSAY_TYPE_UNASSIGNED = 'U'
+COMPOUND_TYPE_COMPOUND = 'compound'
+COMPOUND_TYPE_DRUG = 'drug'
 DATASET_BIOGPS = 'U133AGNF1B'
 DATASET_HPA = 'hpa'
 EXPR_H = 'High'
@@ -28,6 +48,28 @@ EXTDB_HPA = 'hpa'
 EXTDB_ZINC15 = 'zinc15'
 NO = 'N'
 YES = 'Y'
+ACTION_TYPE_CHOICES = [
+    ACTION_TYPE_ACTIVATOR,
+    ACTION_TYPE_AGONIST,
+    ACTION_TYPE_ALLOSTERIC_ANTAGONIST,
+    ACTION_TYPE_ANTAGONIST,
+    ACTION_TYPE_BLOCKER,
+    ACTION_TYPE_INHIBITOR,
+    ACTION_TYPE_MODULATOR,
+    ACTION_TYPE_NEGATIVE_ALLOSTERIC_MODULATOR,
+    ACTION_TYPE_OPENER,
+    ACTION_TYPE_PARTIAL_AGONIST,
+    ACTION_TYPE_POSITIVE_ALLOSTERIC_MODULATOR,
+    ACTION_TYPE_POSITIVE_MODULATOR,
+    ACTION_TYPE_STABILISER,
+    ]
+ASSAY_TYPE_CHOICES = [
+    ASSAY_TYPE_ADMET,
+    ASSAY_TYPE_BINDING,
+    ASSAY_TYPE_FUNCTIONAL,
+    ASSAY_TYPE_TOXICITY,
+    ASSAY_TYPE_UNASSIGNED,
+    ]
 
 # Paths for data files
 PATH_BIOGPS_GCRMA = 'data/biogps/U133AGNF1B.gcrma.avg.csv'
@@ -37,16 +79,17 @@ PATH_BTO_BRENDA_TISSUE_OBO = 'data/bto/BrendaTissueOBO.obo'
 PATH_BTO_TISSUES = 'data/bto/tissues.txt'
 PATH_CHANNEL_CLASSES = 'data/channel-classes/channel-classes.csv'
 PATH_CHANNELPEDIA_INFO = 'data/channel-classes/channelpedia_info.csv'
-PATH_CHEMBL_ASSAYS_COMPOUND = 'data/chembl-assays/output_compound-assays_v1.1.dat'
-PATH_CHEMBL_ASSAYS_DRUG = 'data/chembl-assays/output_drug-assays_v1.1.dat'
-PATH_CHEMBL_HUMAN_ASSAYS_COMPOUND = 'data/chembl-assays/output_human_compound-assays_v1.1.dat' # Not used
-PATH_CHEMBL_HUMAN_ASSAYS_DRUG = 'data/chembl-assays/output_human_drug-assays_v1.1.dat' # Not used
-PATH_GO_ION_CHANNELS = 'data/go/ion-channels-1.csv'
+PATH_CHEMBL_ASSAYS_COMPOUND = 'data/chembl-assays/output_compound-assays_v1.1.dat' # Not used
+PATH_CHEMBL_ASSAYS_DRUG = 'data/chembl-assays/output_drug-assays_v1.1.dat' # Not used
+PATH_CHEMBL_HUMAN_ASSAYS_COMPOUND = 'data/chembl-assays/output_human_compounds-assays_v1.1.dat'
+PATH_CHEMBL_HUMAN_ASSAYS_DRUG = 'data/chembl-assays/output_human_drug-assays_v1.1.dat'
+PATH_GO_ION_CHANNELS = 'data/channel-classes/ion-channels-1.csv'
 PATH_GO_QUICKGO = 'data/go/QuickGO-ion-channel-COMBINED-human.dat'
 PATH_HPA_NORMAL = 'data/hpa/normal_tissue.tsv'
 PATH_HPA_PATHOLOGY = 'data/hpa/pathology.tsv'
 PATH_HPA_RNA_TISSUE = 'data/hpa/rna_tissue.tsv'
 PATH_HPA_TRANSLATION_TABLE = 'data/hpa/hpa_tissue_translation_table.csv'
+PATH_IN_BETSE = 'data/channel-classes/in_betse.csv'
 PATH_TARGET_COMPOUND = 'data/target-compound/target-compound.csv' # Not used
 PATH_TC_CHEMBL_COMPOUND = 'data/target-compound/output-query_ChEMBL-uniprot-compound.dat' # Not used
 PATH_TC_CHEMBL_DRUG = 'data/target-compound/output-query_ChEMBL-uniprot-drug.dat' # Not used
@@ -78,7 +121,7 @@ def setup_tissue_table():
     db = icdb.IonChannelDatabase(PATH_DB)
     db.create_tissue_table()
     tissue_name_list = []
-    with open(PATH_BTO_TISSUES) as tissue_file:
+    with open(PATH_BTO_TISSUES, 'rU') as tissue_file:
         for line in tissue_file:
             tissue_name_list.append(line.strip())
     bto_parser = go_obo_parser.parseGOOBO(PATH_BTO_BRENDA_TISSUE_OBO)
@@ -108,7 +151,8 @@ def input_hpa_tissue_data():
         for row in translation_reader:
             hpa_tissue = row[0]
             bto_tissue = row[1]
-            db.add_db_tissue(EXTDB_HPA, bto_tissue, hpa_tissue)
+            if bto_tissue != '':
+                db.add_db_tissue(EXTDB_HPA, bto_tissue, hpa_tissue)
 
 
 def setup_db_tissue_table():
@@ -118,6 +162,7 @@ def setup_db_tissue_table():
     input_hpa_tissue_data()
 
 
+# Routine is not being used
 def setup_genbank_uniprot_table():
     db = icdb.IonChannelDatabase(PATH_DB)
     db.create_genbank_uniprot_table()
@@ -134,79 +179,82 @@ def setup_genbank_uniprot_table():
 
 def input_chembl_compound_data():
     db = icdb.IonChannelDatabase(PATH_DB)
-    with open(PATH_CHEMBL_ASSAYS_COMPOUND) as compound_file:
+    with open(PATH_CHEMBL_HUMAN_ASSAYS_COMPOUND, 'rU') as compound_file:
         for line in compound_file:
+            line = line.decode('utf_8').encode('utf_8')
             line_split = line.split('\t')
-            upac = line_split[0].strip()
+            target_upac = line_split[0].strip()
             target_chembl_id = line_split[1].strip()
-            target_type = line_split[2].strip()
+            target_type = line_split[2].strip() # Ignored
             target_name = line_split[3].strip()
             compound_chembl_id = line_split[4].strip()
             compound_name = line_split[5].strip()
             iupac_name = line_split[6].strip()
             assay_chembl_id = line_split[7].strip()
             assay_standard_type = line_split[8].strip()
-            assay_standard_relation = line_split[9].strip()
+            assay_standard_relation = line_split[9].strip() # Ignored
             assay_value = line_split[10].strip()
             assay_units = line_split[11].strip()
             assay_type = line_split[12].strip()
-            assay_description = line_split[13].strip()
+            if assay_type not in ASSAY_TYPE_CHOICES:
+                print 'Unexpected assay_type %s' % (assay_type,)
+            assay_description = line_split[13].strip() # Ignored
             if not db.exists_compound_by_chembl_id(compound_chembl_id):
                 db.add_compound(
-                    compound_name, '', '', chembl_id=compound_chembl_id,
-                    synonyms=iupac_name, source_db_name=EXTDB_CHEMBL)
-            if not db.exists_protein(upac):
+                    compound_name, compound_type=COMPOUND_TYPE_COMPOUND,
+                    chembl_id=compound_chembl_id, synonyms=iupac_name,
+                    source_db_name=EXTDB_CHEMBL)
+            if not db.exists_protein(target_upac):
                 db.add_protein(
-                    upac, name=target_name, process_function=target_type,
-                    chembl_id=target_chembl_id)
+                    target_upac, name=target_name, chembl_id=target_chembl_id)
             compound_id = db.get_compound_id_by_chembl_id(compound_chembl_id)
             db.add_interaction(
-                upac, compound_id, action_type='',
-                strength=assay_value.decode('utf_8').encode('utf_8'),
-                strength_units=assay_units.decode('utf_8').encode('utf_8'),
-                assay_type=assay_standard_type.decode('utf_8').encode('utf_8'),
-                chembl_id=assay_chembl_id, source_db_name=EXTDB_CHEMBL)
+                target_upac, compound_id, assay_value=assay_value,
+                assay_units=assay_units,
+                assay_standard_type=assay_standard_type,
+                assay_type=assay_type, assay_chembl_id=assay_chembl_id,
+                source_db_name=EXTDB_CHEMBL)
 
 
 def input_chembl_drug_data():
     db = icdb.IonChannelDatabase(PATH_DB)
-    with open(PATH_CHEMBL_ASSAYS_DRUG) as drug_file:
+    with open(PATH_CHEMBL_HUMAN_ASSAYS_DRUG, 'rU') as drug_file:
         for line in drug_file:
+            line = line.decode('utf_8').encode('utf_8')
             line_split = line.split('\t')
-            upac = line_split[0].strip()
+            target_upac = line_split[0].strip()
             target_chembl_id = line_split[1].strip()
-            target_type = line_split[2].strip()
+            target_type = line_split[2].strip() # Ignored
             target_name = line_split[3].strip()
             drug_mechanism = line_split[4].strip()
+            if drug_mechanism not in ACTION_TYPE_CHOICES:
+                print 'Unexpected action_type %s' % (drug_mechanism,)
             dosed_compound_chembl_id = line_split[5].strip()
             dosed_compound_name = line_split[6].strip()
             active_compound_chembl_id = line_split[7].strip()
             active_compound_name = line_split[8].strip()
             assay_chembl_id = line_split[9].strip()
             assay_standard_type = line_split[10].strip()
-            assay_standard_relation = line_split[11].strip()
+            assay_standard_relation = line_split[11].strip() # Ignored
             assay_value = line_split[12].strip()
             assay_units = line_split[13].strip()
             assay_type = line_split[14].strip()
-            assay_description = line_split[15].strip()
+            assay_description = line_split[15].strip() # Ignored
             if not db.exists_compound_by_chembl_id(active_compound_chembl_id):
                 db.add_compound(
-                    '', '', active_compound_name,
+                    active_compound_name,  compound_type=COMPOUND_TYPE_DRUG,
                     chembl_id=active_compound_chembl_id,
                     synonyms=dosed_compound_name, source_db_name=EXTDB_CHEMBL)
-            if not db.exists_protein(upac):
+            if not db.exists_protein(target_upac):
                 db.add_protein(
-                    upac, name=target_name, process_function=target_type,
-                    chembl_id=target_chembl_id)
+                    target_upac, name=target_name, chembl_id=target_chembl_id)
             compound_id = db.get_compound_id_by_chembl_id(
                 active_compound_chembl_id)
             db.add_interaction(
-                upac, compound_id,
-                action_type=drug_mechanism.decode('utf_8').encode('utf_8'),
-                strength=assay_value.decode('utf_8').encode('utf_8'),
-                strength_units=assay_units.decode('utf_8').encode('utf_8'),
-                assay_type=assay_standard_type.decode('utf_8').encode('utf_8'),
-                chembl_id=assay_chembl_id, source_db_name=EXTDB_CHEMBL)
+                target_upac, compound_id, action_type=drug_mechanism,
+                assay_value=assay_value, assay_units=assay_units,
+                assay_standard_type=assay_standard_type, assay_type=assay_type,
+                assay_chembl_id=assay_chembl_id, source_db_name=EXTDB_CHEMBL)
 
 
 def input_chembl_assay_data():
@@ -216,54 +264,52 @@ def input_chembl_assay_data():
 
 def input_ion_channel_data():
     db = icdb.IonChannelDatabase(PATH_DB)
-    with open(PATH_GO_ION_CHANNELS) as prot_file:
+    with open(PATH_GO_ION_CHANNELS, 'rU') as prot_file:
         prot_reader = csv.reader(prot_file)
         prot_reader.next()
         for row in prot_reader:
+            row = [item.decode('utf_8').encode('utf_8') for item in row]
             upac = row[0]
             gene_symbol = row[1]
-            protein_name = row[2]
-            process_function = row[3]
-            ions = row[4]
-            gating = row[5]
-            ion_channel_subclass = row[6]
-            in_betse = row[7]
+            name = row[2]
+            ions = row[3]
+            gating = row[4]
             if upac != '':
                 if gene_symbol == '-':
                     gene_symbol = ''
-                if in_betse in ['yes', 'soon', 'doable']:
-                    in_betse = YES
-                else:
-                    in_betse = NO
                 if not db.exists_protein(upac):
                     db.add_protein(
-                        upac, gene_symbol, protein_name, process_function,
-                        ions, gating, in_betse, ion_channel_subclass)
+                        upac, gene_symbol=gene_symbol, name=name, ions=ions,
+                        gating=gating)
                 else:
                     old_protein_record = db.lookup_protein(upac)
                     if old_protein_record is not None:
-                        old_upac = old_protein_record['UniProtAccNum']
                         old_gene_symbol = old_protein_record['GeneSymbol']
+                        if old_gene_symbol == '':
+                            db.update_protein_gene_symbol(upac, gene_symbol)
+                        elif old_gene_symbol != gene_symbol:
+                            db.update_protein_gene_symbol(upac, gene_symbol)
+                            print 'Gene symbol mismatch upac=%s old_gene_symbol=%s gene_symbol=%s' \
+                                % (upac, old_gene_symbol, gene_symbol)
                         old_name = old_protein_record['Name']
-                        old_process_function = \
-                            old_protein_record['ProcessFunction']
-                        old_ions = old_protein_record['Ions']
-                        old_gating = old_protein_record['Gating']
-                        old_in_betse = old_protein_record['InBETSE']
-                        old_ion_channel_class_desc = \
-                            old_protein_record['IonChannelClassDesc']
-                        old_ion_channel_subclass = \
-                            old_protein_record['IonChannelSubClass']
-                        old_chembl_id = old_protein_record['ChemblId']
-                        db.update_protein_gene_symbol(upac, gene_symbol)
-                        db.update_protein_name(upac, protein_name)
+                        if old_name == '':
+                            db.update_protein_name(upac, name)
                         db.update_protein_ions(upac, ions)
                         db.update_protein_gating(upac, gating)
-                        if old_in_betse == '':
-                            db.update_protein_in_betse(upac, in_betse)
-                        db.update_protein_ion_channel_sub_class(
-                            upac, ion_channel_subclass)
                 
+
+def input_in_betse_data():
+    db = icdb.IonChannelDatabase(PATH_DB)
+    with open(PATH_IN_BETSE, 'rU') as in_betse_file:
+        in_betse_reader = csv.reader(in_betse_file)
+        in_betse_reader.next()
+        for row in in_betse_reader:
+            gene_symbol = row[0].strip()
+            in_betse = row[1].strip()
+            upac_list = db.get_uniprot_accnums_by_gene_symbol(gene_symbol)
+            for upac in upac_list:
+                db.update_protein_in_betse(upac, in_betse)
+
 
 def setup_protein_compound_interaction_tables():
     db = icdb.IonChannelDatabase(PATH_DB)
@@ -272,17 +318,18 @@ def setup_protein_compound_interaction_tables():
     db.create_interaction_table()
     input_chembl_assay_data()
     input_ion_channel_data()
+    input_in_betse_data()
 
 
 def get_biogps_probeset_id_to_gene_symbol_dict():
     annot_dict = {}
-    with open(PATH_BIOGPS_GNF1H_ANNOT) as chip_annot_file:
+    with open(PATH_BIOGPS_GNF1H_ANNOT, 'rU') as chip_annot_file:
         chip_annot_reader = csv.reader(chip_annot_file, delimiter='\t')
         chip_annot_reader.next()
         for row in chip_annot_reader:
             probeset_id = row[0]
             gene_symbol = row[6]
-            if gene_symbol != '':
+            if gene_symbol not in ['', 'obsoleted by Celera']:
                 annot_dict[probeset_id] = gene_symbol
         chip_annot_file.close()
         return annot_dict
@@ -291,7 +338,7 @@ def get_biogps_probeset_id_to_gene_symbol_dict():
 def input_biogps_expression_data():
     db = icdb.IonChannelDatabase(PATH_DB)
     annot_dict = get_biogps_probeset_id_to_gene_symbol_dict()
-    with open(PATH_BIOGPS_GCRMA) as microarray_file:
+    with open(PATH_BIOGPS_GCRMA, 'rU') as microarray_file:
         microarray_reader = csv.reader(microarray_file)
         header = microarray_reader.next()
         tissue_list = header[1:]
@@ -310,7 +357,7 @@ def input_biogps_expression_data():
                             for upac in upac_list:
                                 db.add_expression(
                                     tissue_bto, upac, expr_level=expr_level,
-                                    assay_type=ASSAY_MICROARRAY,
+                                    assay_type=EXPR_ASSAY_MICROARRAY,
                                     dataset_name=DATASET_BIOGPS,
                                     source_db_name=EXTDB_BIOGPS)
 
@@ -318,7 +365,7 @@ def input_biogps_expression_data():
 # Function is not used
 def get_ensembl_to_uniprot_dict():
     ensembl_to_uniprot = {}
-    with open(PATH_UNIPROT_ENSEMBL_IDMAPPING) as map_file:
+    with open(PATH_UNIPROT_ENSEMBL_IDMAPPING, 'rU') as map_file:
         for line in map_file:
             row = line.strip().split('\t')
             upac = row[0]
@@ -330,86 +377,77 @@ def get_ensembl_to_uniprot_dict():
 
 def input_hpa_rna_expression_data():
     db = icdb.IonChannelDatabase(PATH_DB)
-    with open(PATH_HPA_RNA_TISSUE) as hpa_file:
+    with open(PATH_HPA_RNA_TISSUE, 'rU') as hpa_file:
         hpa_file.next()
         for line in hpa_file:
             row = line.strip().split('\t')
             if len(row) >= 5 and row[0].strip() != '':
-                gene_symbol = row[1]
-                upac_list = db.get_uniprot_accnums_by_gene_symbol(gene_symbol)
+                gene_name = row[1]
+                sample = row[2]
+                value = float(row[3])
+                unit = row[4]
+                upac_list = db.get_uniprot_accnums_by_gene_symbol(gene_name)
                 for upac in upac_list:
-                    gene_name = row[1]
-                    tissue_name = row[2]
-                    expr_level = float(row[3])
                     tissue_bto = db.get_tissue_name_by_db_tissue_name(
-                        EXTDB_HPA, tissue_name)
+                        EXTDB_HPA, sample)
                     if tissue_bto != '':
                         db.add_expression(
-                            tissue_bto, upac, expr_level=expr_level,
-                            assay_type=ASSAY_RNASEQ, dataset_name=DATASET_HPA,
-                            source_db_name=EXTDB_HPA)
+                            tissue_bto, upac, expr_level=value,
+                            expr_units=unit, assay_type=EXPR_ASSAY_RNASEQ,
+                            dataset_name=DATASET_HPA, source_db_name=EXTDB_HPA)
 
 
 def input_hpa_cancer_expression_data():
     db = icdb.IonChannelDatabase(PATH_DB)
-    with open(PATH_HPA_PATHOLOGY) as hpa_file:
+    with open(PATH_HPA_PATHOLOGY, 'rU') as hpa_file:
         hpa_file.next()
-        expr_qual_choices = [EXPR_H, EXPR_M, EXPR_L, EXPR_ND]
+        expr_level_qual_choices = [EXPR_H, EXPR_M, EXPR_L, EXPR_ND]
         for line in hpa_file:
             row = line.strip().split('\t')
-            if len(row) >= 6:
-                gene_symbol = row[1]
-                tissue_name = row[2]
-                upac_list = db.get_uniprot_accnums_by_gene_symbol(gene_symbol)
+            if len(row) >= 7:
+                gene_name = row[1]
+                cancer = row[2]
+                upac_list = db.get_uniprot_accnums_by_gene_symbol(gene_name)
                 for upac in upac_list:
                     tissue_bto = db.get_tissue_name_by_db_tissue_name(
-                        EXTDB_HPA, tissue_name)
+                        EXTDB_HPA, cancer)
                     if tissue_bto != '':
-                        expr_level = 0.
-                        is_data_ok = False
-                        try:
+                        if not '' in row[3:7]:
                             patient_count_list = map(int, row[3:7])
-                            is_data_ok = True
-                        except:
-                            pass
-                        if is_data_ok:
                             patient_count_max = max(patient_count_list)
-                            patient_count_max_idx = [
-                                idx for idx, value
-                                in enumerate(patient_count_list)
-                                if value == patient_count_max][-1]
-                            expr_level_qual = expr_qual_choices[
-                                patient_count_max_idx]
+                            patient_count_max_index = 0
+                            for i in xrange(len(patient_count_list)-1, -1, -1):
+                                if patient_count_list[i] == patient_count_max:
+                                    patient_count_max_index = i
+                            expr_level_qual = expr_level_qual_choices[
+                                patient_count_max_index]
                             db.add_expression(
-                                tissue_bto, upac, expr_level=expr_level,
+                                tissue_bto, upac,
                                 expr_level_qual=expr_level_qual,
-                                assay_type=ASSAY_IMMUNO,
+                                assay_type=EXPR_ASSAY_IMMUNO,
                                 dataset_name=DATASET_HPA,
                                 source_db_name=EXTDB_HPA)
 
 
 def input_hpa_normal_expression_data():
     db = icdb.IonChannelDatabase(PATH_DB)
-    with open(PATH_HPA_NORMAL) as hpa_file:
+    with open(PATH_HPA_NORMAL, 'rU') as hpa_file:
         hpa_file.next()
         for line in hpa_file:
             row = line.strip().split('\t')
             if len(row) >= 6:
-                gene_symbol = row[1]
-                tissue_name = row[2]
-                expr_level_qual = row[4]
-                upac_list = db.get_uniprot_accnums_by_gene_symbol(gene_symbol)
+                gene_name = row[1]
+                tissue = row[2]
+                level = row[4]
+                upac_list = db.get_uniprot_accnums_by_gene_symbol(gene_name)
                 for upac in upac_list:
                     tissue_bto = db.get_tissue_name_by_db_tissue_name(
-                        EXTDB_HPA, tissue_name)
+                        EXTDB_HPA, tissue)
                     if tissue_bto != '':
-                        expr_level = 0.
-                        if expr_level_qual in [
-                                EXPR_H, EXPR_M, EXPR_L, EXPR_ND]:
+                        if level in [EXPR_H, EXPR_M, EXPR_L, EXPR_ND]:
                             db.add_expression(
-                                tissue_bto, upac, expr_level=expr_level,
-                                expr_level_qual=expr_level_qual,
-                                assay_type=ASSAY_IMMUNO,
+                                tissue_bto, upac, expr_level_qual=level,
+                                assay_type=EXPR_ASSAY_IMMUNO,
                                 dataset_name=DATASET_HPA,
                                 source_db_name=EXTDB_HPA)
 
@@ -425,10 +463,11 @@ def setup_expression_table():
 
 def get_channelpedia_dict():
     channelpedia_dict = {}
-    with open(PATH_CHANNELPEDIA_INFO) as channelpedia_file:
+    with open(PATH_CHANNELPEDIA_INFO, 'rU') as channelpedia_file:
         channelpedia_reader = csv.reader(channelpedia_file)
         channelpedia_reader.next()
         for row in channelpedia_reader:
+            row = [item.decode('utf_8').encode('utf_8') for item in row]
             subclass = row[1]
             intro_text = row[2]
             url = row[3]
@@ -462,12 +501,10 @@ def setup_channel_class_tables():
                 else:
                     channelpedia_text = ''
                     channelpedia_url = ''
-                channelpedia_text = channelpedia_text.decode('utf_8').encode('utf_8')
-                channelpedia_url = channelpedia_url.decode('utf_8').encode('utf_8')
                 db.add_channel_sub_class(
                     channel_subclass, channel_class,
                     channelpedia_text=channelpedia_text,
-                    channelpedia_url=channelpedia_url)
+                    channelpedia_url=channelpedia_url, subfamily=subfamily)
             upac_list = db.get_uniprot_accnums_by_gene_symbol(gene_symbol)
             for upac in upac_list:
                 db.update_protein_sub_class(upac, channel_subclass)
@@ -476,15 +513,33 @@ def setup_channel_class_tables():
 def setup_go_term_table():
     db = icdb.IonChannelDatabase(PATH_DB)
     db.create_go_term_table()
-    with open(PATH_GO_QUICKGO) as go_file:
+    with open(PATH_GO_QUICKGO, 'rU') as go_file:
         go_reader = csv.reader(go_file, delimiter='\t')
         go_reader.next()
         for row in go_reader:
             db_name = row[0]
             upac = row[1]
+            gene_symbol = row[2]
+            go_qualifier = row[3]
             goid = row[4]
-            if db_name == 'UniProtKB' and db.exists_protein(upac):
-                db.add_go_term(upac, goid)
+            go_name = row[5]
+            taxon_id = row[6]
+            gene_product_name = row[7]
+            go_aspect = row[8]
+            if db_name == 'UniProtKB':
+                if db.exists_protein(upac):
+                    old_protein_record = db.lookup_protein(upac)
+                    old_gene_symbol = old_protein_record['GeneSymbol']
+                    if old_gene_symbol == '':
+                        db.update_protein_gene_symbol(upac, gene_symbol)
+                    elif old_gene_symbol != gene_symbol:
+                        db.update_protein_gene_symbol(upac, gene_symbol)
+                    old_name = old_protein_record['Name']
+                    if old_name == '':
+                        db.update_protein_name(upac, gene_product_name)
+                    db.add_go_term(
+                        upac, goid, name=go_name, qualifier=go_qualifier,
+                        aspect=go_aspect)
 
 
 def setup_specificity_table_with_jp_method():

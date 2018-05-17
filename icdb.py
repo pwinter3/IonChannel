@@ -7,15 +7,22 @@ class IonChannelDatabase(object):
     def __init__(self, path_db):
         self._path_db = path_db
         self._conn = sqlite3.connect(path_db)
+        self._conn.text_factory = str
 
     def _get_conn(self):
         return self._conn
     
-    def begin_transaction(self):
-        self._conn.isolation_level = None
     
+    # Routines for executing multiple queries in one transaction
+    # Do not work
+
+    def begin_transaction(self):
+        conn = self._get_conn()
+        conn.execute('BEGIN TRANSACTION')
+
     def end_transaction(self):
-        self._conn.commit()
+        conn = self._get_conn()
+        conn.execute('COMMIT')
 
 
     # Routines for ChannelSuperClass table
@@ -122,21 +129,24 @@ class IonChannelDatabase(object):
                 Name TEXT PRIMARY KEY NOT NULL,
                 Class TEXT NOT NULL,
                 ChannelpediaText TEXT NOT NULL,
-                ChannelpediaURL TEXT NOT NULL)
+                ChannelpediaURL TEXT NOT NULL,
+                Subfamily TEXT NOT NULL)
             """)
         conn.commit()
 
     def add_channel_sub_class(
             self, name, channel_class='', channelpedia_text='',
-            channelpedia_url=''):
+            channelpedia_url='', subfamily=''):
         conn = self._get_conn()
         conn.text_factory = str
         curs = conn.cursor()
         curs.execute("""
             INSERT INTO ChannelSubClass(
-                Name, Class, ChannelpediaText, ChannelpediaURL)
-            VALUES (?, ?, ?, ?)
-            """, (name, channel_class, channelpedia_text, channelpedia_url))
+                Name, Class, ChannelpediaText, ChannelpediaURL, Subfamily)
+            VALUES (?, ?, ?, ?, ?)
+            """, (
+                name, channel_class, channelpedia_text, channelpedia_url,
+                subfamily))
         conn.commit()
 
     def exists_channel_sub_class(self, name):
@@ -251,31 +261,27 @@ class IonChannelDatabase(object):
                 UniProtAccNum TEXT PRIMARY KEY NOT NULL,
                 GeneSymbol TEXT NOT NULL,
                 Name TEXT NOT NULL,
-                ProcessFunction TEXT NOT NULL,
                 Ions TEXT NOT NULL,
                 Gating TEXT NOT NULL,
                 InBETSE TEXT NOT NULL,
-                IonChannelClassDesc TEXT NOT NULL,
                 IonChannelSubClass TEXT NOT NULL,
                 ChemblId TEXT NOT NULL)
             """)
         conn.commit()
 
     def add_protein(
-            self, upac, gene_symbol='', name='', process_function='', ions='',
-            gating='', in_betse='', ion_channel_class_desc='',
-            ion_channel_sub_class='', chembl_id=''):
+            self, upac, gene_symbol='', name='', ions='', gating='',
+            in_betse='N', ion_channel_sub_class='', chembl_id=''):
         conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             INSERT INTO Protein(
-                UniProtAccNum, GeneSymbol, Name, ProcessFunction, Ions, Gating,
-                InBETSE, IonChannelClassDesc, IonChannelSubClass, ChemblId)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                UniProtAccNum, GeneSymbol, Name, Ions, Gating, InBETSE,
+                IonChannelSubClass, ChemblId)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """, (
-                upac, gene_symbol, name, process_function, ions, gating,
-                in_betse, ion_channel_class_desc, ion_channel_sub_class,
-                chembl_id))
+                upac, gene_symbol, name, ions, gating, in_betse,
+                ion_channel_sub_class, chembl_id))
         conn.commit()
 
     def update_protein_sub_class(self, upac, ion_channel_sub_class):
@@ -318,16 +324,6 @@ class IonChannelDatabase(object):
             """, (gene_symbol, upac))
         conn.commit()
 
-    def update_protein_process_function(self, upac, process_function):
-        conn = self._get_conn()
-        curs = conn.cursor()
-        curs.execute("""
-            UPDATE Protein
-            SET ProcessFunction = ?
-            WHERE UniProtAccNum = ?
-            """, (process_function, upac))
-        conn.commit()
-
     def update_protein_ions(self, upac, ions):
         conn = self._get_conn()
         curs = conn.cursor()
@@ -355,17 +351,6 @@ class IonChannelDatabase(object):
             SET InBETSE = ?
             WHERE UniProtAccNum = ?
             """, (in_betse, upac))
-        conn.commit()
-
-    def update_protein_ion_channel_class_desc(
-            self, upac, ion_channel_class_desc):
-        conn = self._get_conn()
-        curs = conn.cursor()
-        curs.execute("""
-            UPDATE Protein
-            SET IonChannelClassDesc = ?
-            WHERE UniProtAccNum = ?
-            """, (ion_channel_class_desc, upac))
         conn.commit()
 
     def update_protein_ion_channel_sub_class(
@@ -397,9 +382,8 @@ class IonChannelDatabase(object):
         conn.row_factory = sqlite3.Row
         curs = conn.cursor()
         curs.execute("""
-            SELECT UniProtAccNum, GeneSymbol, Name, ProcessFunction, Ions,
-                Gating, InBETSE, IonChannelClassDesc, IonChannelSubClass,
-                ChemblId
+            SELECT UniProtAccNum, GeneSymbol, Name, Ions, Gating, InBETSE,
+                IonChannelSubClass, ChemblId
             FROM Protein
             WHERE UniProtAccNum = ?
             """, (upac,))
@@ -482,7 +466,8 @@ class IonChannelDatabase(object):
 
     def add_expression(
             self, tissue_name, upac, expr_level=0., expr_level_qual='',
-            expr_units='', assay_type='', dataset_name='', source_db_name=''):
+            expr_units='', assay_type='', dataset_name='', source_db_name='',
+            commit=True):
         conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
@@ -493,7 +478,8 @@ class IonChannelDatabase(object):
             """, (
                 tissue_name, upac, expr_level, expr_level_qual, expr_units,
                 assay_type, dataset_name, source_db_name))
-        conn.commit()
+        if commit:
+            conn.commit()
 
     def exists_expression(self, upac):
         conn = self._get_conn()
@@ -583,6 +569,7 @@ class IonChannelDatabase(object):
 
 
     # Routines for GenbankUniprot table
+    # Table is not being used, should remove this code
 
     def create_genbank_uniprot_table(self):
         conn = self._get_conn()
@@ -641,6 +628,7 @@ class IonChannelDatabase(object):
         curs.execute("""
             CREATE TABLE Compound(
                 Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                CompoundType TEXT NOT NULL,
                 SMILES TEXT NOT NULL,
                 InChI TEXT NOT NULL,
                 Name TEXT NOT NULL,
@@ -653,18 +641,19 @@ class IonChannelDatabase(object):
         conn.commit()
 
     def add_compound(
-            self, name, smiles='', inchi='', chembl_id='', synonyms='',
-            approval_status='', first_approval_year='', source_db_name=''):
+            self, name, compound_type='', smiles='', inchi='', chembl_id='',
+            synonyms='', approval_status='', first_approval_year='',
+            source_db_name=''):
         conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             INSERT INTO Compound(
-                SMILES, InChI, Name, ChemblId, Synonyms, ApprovalStatus,
-                FirstApprovalYear, SourceDBName)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                CompoundType, SMILES, InChI, Name, ChemblId, Synonyms,
+                ApprovalStatus, FirstApprovalYear, SourceDBName)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
-                smiles, inchi, name, chembl_id, synonyms, approval_status,
-                first_approval_year, source_db_name))
+                compound_type, smiles, inchi, name, chembl_id, synonyms,
+                approval_status, first_approval_year, source_db_name))
         conn.commit()
 
     def exists_compound_by_chembl_id(self, chembl_id):
@@ -685,8 +674,8 @@ class IonChannelDatabase(object):
         conn.row_factory = sqlite3.Row
         curs = conn.cursor()
         curs.execute("""
-            SELECT Id, SMILES, InChI, Name, ChemblId, Synonyms, ApprovalStatus,
-                FirstApprovalYear, SourceDBName
+            SELECT Id, CompoundType, SMILES, InChI, Name, ChemblId, Synonyms,
+                ApprovalStatus, FirstApprovalYear, SourceDBName
             FROM Compound
             WHERE Id = ?
             """, (compound_id,))
@@ -738,29 +727,31 @@ class IonChannelDatabase(object):
                 TargetUniProtAccNum TEXT NOT NULL,
                 CompoundId INTEGER NOT NULL,
                 ActionType TEXT NOT NULL,
-                ActionDesc TEXT NOT NULL,
-                Strength REAL NOT NULL,
-                StrengthUnits TEXT NOT NULL,
+                AssayValue REAL NOT NULL,
+                AssayUnits TEXT NOT NULL,
+                AssayStandardType TEXT NOT NULL,
                 AssayType TEXT NOT NULL,
-                ChemblId TEXT NOT NULL,
+                AssayChemblId TEXT NOT NULL,
                 SourceDBName TEXT NOT NULL)
             """)
         conn.commit()
 
     def add_interaction(
-            self, target_upac, compound_id, action_type='', action_desc='',
-            strength=0, strength_units='', assay_type='', chembl_id='',
-            source_db_name=''):
+            self, target_upac, compound_id, action_type='', assay_value=0,
+            assay_units='', assay_standard_type='', assay_type='', 
+            assay_chembl_id='', source_db_name=''):
         conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
             INSERT INTO Interaction(
-                TargetUniProtAccNum, CompoundId, ActionType, ActionDesc,
-                Strength, StrengthUnits, AssayType, ChemblId, SourceDBName)
+                TargetUniProtAccNum, CompoundId, ActionType, AssayValue,
+                AssayUnits, AssayStandardType, AssayType, AssayChemblId,
+                SourceDBName)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
-                target_upac, compound_id, action_type, action_desc, strength,
-                strength_units, assay_type, chembl_id, source_db_name))
+                target_upac, compound_id, action_type, assay_value,
+                assay_units, assay_standard_type, assay_type, assay_chembl_id,
+                source_db_name))
         conn.commit()
 
     def exists_interaction_uniprot_accnum_compound_id(self, upac, compound_id):
@@ -806,8 +797,9 @@ class IonChannelDatabase(object):
         conn.row_factory = sqlite3.Row
         curs = conn.cursor()
         curs.execute("""
-            SELECT Id, TargetUniProtAccNum, CompoundId, ActionType, ActionDesc,
-                Strength, StrengthUnits, AssayType, ChemblId, SourceDBName
+            SELECT Id, TargetUniProtAccNum, CompoundId, ActionType,
+                AssayValue, AssayUnits, AssayStandardType, AssayChemblId,
+                SourceDBName
             FROM Interaction
             WHERE Id = ?
             """, (interaction_id,))
@@ -927,17 +919,20 @@ class IonChannelDatabase(object):
             CREATE TABLE GoTerm(
                 Id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                 UniProtAccNum TEXT NOT NULL,
-                GoId TEXT NOT NULL)
+                GoId TEXT NOT NULL,
+                Name TEXT NOT NULL,
+                Qualifier TEXT NOT NULL,
+                Aspect TEXT NOT NULL)
             """)
         conn.commit()
 
-    def add_go_term(self, upac, goid):
+    def add_go_term(self, upac, goid, name='', qualifier='', aspect=''):
         conn = self._get_conn()
         curs = conn.cursor()
         curs.execute("""
-            INSERT INTO GoTerm(UniProtAccNum, GoId)
-            VALUES (?, ?)
-            """, (upac, goid))
+            INSERT INTO GoTerm(UniProtAccNum, GoId, Name, Qualifier, Aspect)
+            VALUES (?, ?, ?, ?, ?)
+            """, (upac, goid, name, qualifier, aspect))
         conn.commit()
 
     def delete_go_terms(self):
@@ -1016,21 +1011,16 @@ class IonChannelDatabase(object):
         upac_list = self.get_protein_uniprot_accnums()
         in_betse_count = 0
         in_betse_with_expr_count = 0
-        in_betse_with_expr_list = []
-        in_betse_no_expr_list = []
+        in_betse_with_inter_count = 0
         for upac in upac_list:
-            protein_record = self.lookup_protein(upac)
-            if protein_record is not None:
-                in_betse = protein_record['InBETSE']
-                if in_betse == 'Y':
-                    in_betse_count += 1
-                    if self.exists_expression(upac):
-                        in_betse_with_expr_count += 1
-                        in_betse_with_expr_list.append(
-                            self.get_gene_symbols_by_uniprot_accnum(upac))
-                    else:
-                        in_betse_no_expr_list.append(
-                            self.get_gene_symbols_by_uniprot_accnum(upac))
+            if self.is_in_betse(upac):
+                in_betse_count += 1
+                if self.exists_expression(upac):
+                    in_betse_with_expr_count += 1
+                if self.exists_interaction_by_uniprot_accnum(upac):
+                    in_betse_with_inter_count += 1
         print 'Number of proteins in betse = %d' % in_betse_count
         print 'Number of proteins in betse with expression = %d' \
             % in_betse_with_expr_count
+        print 'Number of proteins in betse with interaction = %d' \
+            % in_betse_with_inter_count
