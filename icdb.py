@@ -452,7 +452,7 @@ class IonChannelDatabase(object):
         curs = conn.cursor()
         if include_betse:
             sql = """
-                SELECT Protein.UniProtAccNum, Name, GeneSymbol
+                SELECT Protein.UniProtAccNum, Protein.Name, GeneSymbol
                 FROM Protein
                 INNER JOIN Expression
                     ON Protein.UniProtAccNum = Expression.ProteinUniProtAccNum
@@ -474,7 +474,7 @@ class IonChannelDatabase(object):
                 """ + ','.join(['?'] * len(tissue_list)) + ')))'
         else:
             sql = """
-                SELECT Protein.UniProtAccNum, Name, GeneSymbol
+                SELECT Protein.UniProtAccNum, Protein.Name, GeneSymbol
                 FROM Protein
                 INNER JOIN Expression
                     ON Protein.UniProtAccNum = Expression.ProteinUniProtAccNum
@@ -873,25 +873,25 @@ class IonChannelDatabase(object):
                     AND AssayUnits = ?
                 ''', (upac, type, unit))
         elif type != None:
-            curs.execute("""
+            curs.execute('''
                 SELECT Id
                 FROM Interaction
                 WHERE TargetUniProtAccNum = ?
                     AND AssayStandardType = ?
-                """, (upac, type))
+                ''', (upac, type))
         elif unit != None:
-            curs.execute("""
+            curs.execute('''
                 SELECT Id
                 FROM Interaction
                 WHERE TargetUniProtAccNum = ?
                     AND AssayUnits = ?
-                """, (upac, unit))
+                ''', (upac, unit))
         else:
-            curs.execute("""
+            curs.execute('''
                 SELECT Id
                 FROM Interaction
                 WHERE TargetUniProtAccNum = ?
-                """, (upac,))
+                ''', (upac,))
         row_list = curs.fetchall()
         return [elem[0] for elem in row_list]
 
@@ -1012,10 +1012,7 @@ class IonChannelDatabase(object):
                 AND UniProtAccNum = ?
             """, (tissue_name, upac))
         row = curs.fetchone()
-        if row:
-            value = float(row[0])
-        else:
-            value = None
+        value = row[0]
         return value
 
     def delete_specificities(self):
