@@ -162,6 +162,18 @@ class IonChannelDatabase(object):
         row = curs.fetchone()
         return bool(row[0] == 1)
 
+    def get_channelpedia_info(self, name):
+        conn = self._get_conn()
+        conn.row_factory = sqlite3.Row
+        curs = conn.cursor()
+        curs.execute("""
+            SELECT ChannelpediaText, ChannelpediaURL
+            FROM ChannelSubClass
+            WHERE Name = ?
+            """, (name,))
+        row = curs.fetchone()
+        return row
+
     def delete_channel_sub_classes(self):
         conn = self._get_conn()
         curs = conn.cursor()
@@ -433,6 +445,59 @@ class IonChannelDatabase(object):
         row_list = curs.fetchall()
         return [elem[0] for elem in row_list]
 
+    def get_in_betse_or_expr_threshold_protein(
+            self, tissue_list, threshold, include_betse=True,
+            specificity_option='comprehensive'):
+        conn = self._get_conn()
+        curs = conn.cursor()
+        if include_betse:
+            sql = """
+                SELECT Protein.UniProtAccNum, Name, GeneSymbol
+                FROM Protein
+                INNER JOIN Expression
+                    ON Protein.UniProtAccNum = Expression.ProteinUniProtAccNum
+                INNER JOIN GoTerm
+                    ON Protein.UniProtAccNum = GoTerm.UniProtAccNum
+                WHERE (
+                    Protein.InBETSE = "Y" OR (
+                        GoTerm.GoId IN (
+                                "GO:0001518","GO:0005891","GO:0005892",
+                                "GO:0008076","GO:0008328","GO:0016935",
+                                "GO:0017071","GO:0017146","GO:0032281",
+                                "GO:0032983","GO:0034702","GO:0034703",
+                                "GO:0034704","GO:0034705","GO:0034706",
+                                "GO:0034707","GO:0036128","GO:0071193",
+                                "GO:0098855","GO:1902937","GO:1904602",
+                                "GO:1990246","GO:1990425","GO:1990454")
+                            AND Expression.ExprLevel > ?
+                            AND Expression.TissueName IN (
+                """ + ','.join(['?'] * len(tissue_list)) + ')))'
+        else:
+            sql = """
+                SELECT Protein.UniProtAccNum, Name, GeneSymbol
+                FROM Protein
+                INNER JOIN Expression
+                    ON Protein.UniProtAccNum = Expression.ProteinUniProtAccNum
+                INNER JOIN GoTerm
+                    ON Protein.UniProtAccNum = GoTerm.UniProtAccNum
+                WHERE (
+                    Expression.ExprLevel > ?
+                        AND GoTerm.GoId IN (
+                            "GO:0001518","GO:0005891","GO:0005892",
+                            "GO:0008076","GO:0008328","GO:0016935",
+                            "GO:0017071","GO:0017146","GO:0032281",
+                            "GO:0032983","GO:0034702","GO:0034703",
+                            "GO:0034704","GO:0034705","GO:0034706",
+                            "GO:0034707","GO:0036128","GO:0071193",
+                            "GO:0098855","GO:1902937","GO:1904602",
+                            "GO:1990246","GO:1990425","GO:1990454")
+                        AND Expression.TissueName IN (
+                """ + ','.join(['?'] * len(tissue_list)) + '))'
+        curs.execute(sql, (threshold,) + tuple(tissue_list))
+        resultset = curs.fetchall()
+        resultset = list(set(resultset)) # Remove redundant records
+        return resultset
+
     def delete_proteins(self):
         conn = self._get_conn()
         curs = conn.cursor()
@@ -524,6 +589,20 @@ class IonChannelDatabase(object):
         curs = conn.cursor()
         curs.execute("""
             SELECT ExprLevel
+            FROM Expression
+            WHERE ProteinUniProtAccNum = ?
+                AND TissueName = ?
+                AND DatasetName = ?
+            """, (upac, tissue_name, dataset_name))
+        row_list = curs.fetchall()
+        return [elem[0] for elem in row_list]
+
+    def get_expression_level_qual_by_uniprot_accnum_tissue_dataset(
+            self, upac, tissue_name, dataset_name):
+        conn = self._get_conn()
+        curs = conn.cursor()
+        curs.execute("""
+            SELECT ExprLevelQual
             FROM Expression
             WHERE ProteinUniProtAccNum = ?
                 AND TissueName = ?
@@ -781,14 +860,38 @@ class IonChannelDatabase(object):
         row = curs.fetchone()
         return bool(row[0] == 1)
 
-    def get_interaction_ids_by_uniprot_accnum(self, upac):
+    def get_interaction_ids_by_uniprot_accnum(
+            self, upac, type=None, unit=None):
         conn = self._get_conn()
         curs = conn.cursor()
-        curs.execute("""
-            SELECT Id
-            FROM Interaction
-            WHERE TargetUniProtAccNum = ?
-            """, (upac,))
+        if type != None and unit != None:
+            curs.execute('''
+                SELECT Id
+                FROM Interaction
+                WHERE TargetUniProtAccNum = ?
+                    AND AssayStandardType = ?
+                    AND AssayUnits = ?
+                ''', (upac, type, unit))
+        elif type != None:
+            curs.execute("""
+                SELECT Id
+                FROM Interaction
+                WHERE TargetUniProtAccNum = ?
+                    AND AssayStandardType = ?
+                """, (upac, type))
+        elif unit != None:
+            curs.execute("""
+                SELECT Id
+                FROM Interaction
+                WHERE TargetUniProtAccNum = ?
+                    AND AssayUnits = ?
+                """, (upac, unit))
+        else:
+            curs.execute("""
+                SELECT Id
+                FROM Interaction
+                WHERE TargetUniProtAccNum = ?
+                """, (upac,))
         row_list = curs.fetchall()
         return [elem[0] for elem in row_list]
 
@@ -897,6 +1000,23 @@ class IonChannelDatabase(object):
             VALUES (?, ?, ?)
             """, (tissue_name, upac, specificity_score))
         conn.commit()
+
+    def get_specificity(self, tissue_name, upac):
+        conn = self._get_conn()
+        conn.row_factory = sqlite3.Row
+        curs = conn.cursor()
+        curs.execute("""
+            SELECT SpecificityScore
+            FROM Specificity
+            WHERE TissueName = ?
+                AND UniProtAccNum = ?
+            """, (tissue_name, upac))
+        row = curs.fetchone()
+        if row:
+            value = float(row[0])
+        else:
+            value = None
+        return value
 
     def delete_specificities(self):
         conn = self._get_conn()
