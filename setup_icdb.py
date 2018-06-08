@@ -85,6 +85,7 @@ PATH_CHEMBL_HUMAN_ASSAYS_COMPOUND = 'data/chembl-assays/output_human_compounds-a
 PATH_CHEMBL_HUMAN_ASSAYS_DRUG = 'data/chembl-assays/output_human_drug-assays_v1.1.dat'
 PATH_GO_ION_CHANNELS = 'data/channel-classes/ion-channels-1.csv'
 PATH_GO_QUICKGO = 'data/go/QuickGO-ion-channel-COMBINED-human.dat'
+PATH_GO_AMIGO = 'data/go/go_0006811_taxon_9606.dat'
 PATH_HPA_NORMAL = 'data/hpa/normal_tissue.tsv'
 PATH_HPA_PATHOLOGY = 'data/hpa/pathology.tsv'
 PATH_HPA_RNA_TISSUE = 'data/hpa/rna_tissue.tsv'
@@ -510,36 +511,61 @@ def setup_channel_class_tables():
                 db.update_protein_sub_class(upac, channel_subclass)
 
 
+#def setup_go_term_table():
+#    db = icdb.IonChannelDatabase(PATH_DB)
+#    db.create_go_term_table()
+#    with open(PATH_GO_QUICKGO, 'rU') as go_file:
+#        go_reader = csv.reader(go_file, delimiter='\t')
+#        go_reader.next()
+#        for row in go_reader:
+#            db_name = row[0]
+#            upac = row[1]
+#            gene_symbol = row[2]
+#            go_qualifier = row[3]
+#            goid = row[4]
+#            go_name = row[5]
+#            taxon_id = row[6]
+#            gene_product_name = row[7]
+#            go_aspect = row[8]
+#            if db_name == 'UniProtKB':
+#                if db.exists_protein(upac):
+#                    old_protein_record = db.lookup_protein(upac)
+#                    old_gene_symbol = old_protein_record['GeneSymbol']
+#                    if old_gene_symbol == '':
+#                        db.update_protein_gene_symbol(upac, gene_symbol)
+#                    elif old_gene_symbol != gene_symbol:
+#                        db.update_protein_gene_symbol(upac, gene_symbol)
+#                    old_name = old_protein_record['Name']
+#                    if old_name == '':
+#                        db.update_protein_name(upac, gene_product_name)
+#                    db.add_go_term(
+#                        upac, goid, name=go_name, qualifier=go_qualifier,
+#                        aspect=go_aspect)
+
 def setup_go_term_table():
     db = icdb.IonChannelDatabase(PATH_DB)
     db.create_go_term_table()
-    with open(PATH_GO_QUICKGO, 'rU') as go_file:
+    with open(PATH_GO_AMIGO, 'rU') as go_file:
         go_reader = csv.reader(go_file, delimiter='\t')
         go_reader.next()
         for row in go_reader:
-            db_name = row[0]
-            upac = row[1]
-            gene_symbol = row[2]
-            go_qualifier = row[3]
-            goid = row[4]
-            go_name = row[5]
-            taxon_id = row[6]
-            gene_product_name = row[7]
-            go_aspect = row[8]
-            if db_name == 'UniProtKB':
-                if db.exists_protein(upac):
-                    old_protein_record = db.lookup_protein(upac)
-                    old_gene_symbol = old_protein_record['GeneSymbol']
-                    if old_gene_symbol == '':
-                        db.update_protein_gene_symbol(upac, gene_symbol)
-                    elif old_gene_symbol != gene_symbol:
-                        db.update_protein_gene_symbol(upac, gene_symbol)
-                    old_name = old_protein_record['Name']
-                    if old_name == '':
-                        db.update_protein_name(upac, gene_product_name)
-                    db.add_go_term(
-                        upac, goid, name=go_name, qualifier=go_qualifier,
-                        aspect=go_aspect)
+            bioentity = row[0]
+            db_name, upac = bioentity.split(':')
+            bioentity_name = row[1]
+            qualifier = row[2]
+            annotation_class = row[3]
+            annotation_extension_json = row[4]
+            assigned_by = row[5]
+            taxon = row[6]
+            evidence_type = row[7]
+            evidence_with = row[8]
+            panther_family = row[9]
+            type = row[10]
+            bioentity_isoform = row[11]
+            reference = row[12]
+            date = row[13]
+            if db_name == 'UniProtKB' and db.exists_protein(upac):
+                db.add_go_term(upac, 'GO:0006811')
 
 
 def setup_specificity_table_with_jp_method():

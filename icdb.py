@@ -460,15 +460,7 @@ class IonChannelDatabase(object):
                     ON Protein.UniProtAccNum = GoTerm.UniProtAccNum
                 WHERE (
                     Protein.InBETSE = "Y" OR (
-                        GoTerm.GoId IN (
-                                "GO:0001518","GO:0005891","GO:0005892",
-                                "GO:0008076","GO:0008328","GO:0016935",
-                                "GO:0017071","GO:0017146","GO:0032281",
-                                "GO:0032983","GO:0034702","GO:0034703",
-                                "GO:0034704","GO:0034705","GO:0034706",
-                                "GO:0034707","GO:0036128","GO:0071193",
-                                "GO:0098855","GO:1902937","GO:1904602",
-                                "GO:1990246","GO:1990425","GO:1990454")
+                        GoTerm.GoId IN ("GO:0006811")
                             AND Expression.ExprLevel > ?
                             AND Expression.TissueName IN (
                 """ + ','.join(['?'] * len(tissue_list)) + ')))'
@@ -482,15 +474,7 @@ class IonChannelDatabase(object):
                     ON Protein.UniProtAccNum = GoTerm.UniProtAccNum
                 WHERE (
                     Expression.ExprLevel > ?
-                        AND GoTerm.GoId IN (
-                            "GO:0001518","GO:0005891","GO:0005892",
-                            "GO:0008076","GO:0008328","GO:0016935",
-                            "GO:0017071","GO:0017146","GO:0032281",
-                            "GO:0032983","GO:0034702","GO:0034703",
-                            "GO:0034704","GO:0034705","GO:0034706",
-                            "GO:0034707","GO:0036128","GO:0071193",
-                            "GO:0098855","GO:1902937","GO:1904602",
-                            "GO:1990246","GO:1990425","GO:1990454")
+                        AND GoTerm.GoId IN ("GO:0006811")
                         AND Expression.TissueName IN (
                 """ + ','.join(['?'] * len(tissue_list)) + '))'
         curs.execute(sql, (threshold,) + tuple(tissue_list))
